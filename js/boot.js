@@ -40,6 +40,7 @@ const state = {
   markAt: 0,
   loaded: false,
   done: false,
+  onReady: null,
 };
 
 /** Respeta la preferencia del sistema: sin motion, la intro no actúa. */
@@ -70,8 +71,9 @@ function measureStrokes(root) {
   });
 }
 
-export function initBoot() {
+export function initBoot(onReady) {
   const el = document.getElementById('boot');
+  state.onReady = onReady ?? null;
   if (!el) return;
 
   state.el = el;
@@ -149,23 +151,31 @@ function scheduleExit() {
   else setTimeout(scheduleExit, wait);
 }
 
+/**
+ * Fin de la parte 2D: se apagan los símbolos y la barra, pero el fondo negro
+ * SE QUEDA. A partir de acá manda la cinemática 3D (js/intro.js), que necesita
+ * ese negro de telón mientras la consola está en primer plano.
+ */
 function exit() {
   if (state.done) return;
   state.done = true;
 
+  state.el?.classList.add('cinema');
+  state.onReady?.();
+}
+
+/**
+ * Descubre la página: el telón negro se desvanece y abajo aparece el sitio.
+ * Lo llama la cinemática cuando la cámara ya se está alejando.
+ */
+export function clearBoot() {
   const el = state.el;
-  if (!el) { document.body.classList.add('booted'); return; }
-
-  el.classList.add('out');
-
-  /* El hero entra mientras la cortina todavía está subiendo. Encadenar las
-     dos cosas en vez de esperar a que termine la primera es lo que hace que
-     se sienta una transición y no dos animaciones pegadas. */
-  setTimeout(() => document.body.classList.add('booted'), 180);
-
-  // Fuera del árbol: un overlay a pantalla completa, aunque esté transparente,
-  // sigue componiéndose en cada frame.
-  setTimeout(() => el.classList.add('gone'), T.curtain + 400);
+  document.body.classList.add('booted');
+  if (!el) return;
+  el.classList.add('clear');
+  // Un overlay a pantalla completa se sigue componiendo cada frame aunque sea
+  // transparente: se saca del árbol apenas termina de desvanecerse.
+  setTimeout(() => el.classList.add('gone'), T.curtain + 200);
 }
 
 /**

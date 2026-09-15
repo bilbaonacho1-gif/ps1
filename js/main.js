@@ -18,7 +18,9 @@ import {
 import { initInteraction, updateInteractions, interactState } from './interact.js';
 import { initScrollSync, updateScrollCamera, setScrollContainer, bindControls } from './scroll.js';
 import { initScrolly, updateScrolly, initReadingProgress, initCounters } from './scrolly.js';
-import { initBoot, setBootProgress, finishBoot, armBootFailsafe, BOOT_DRAW_MS } from './boot.js';
+import { initBoot, setBootProgress, finishBoot, armBootFailsafe, clearBoot, BOOT_DRAW_MS } from './boot.js';
+import { initIntro, startIntro, updateIntro, skipIntro, introActive } from './intro.js';
+import { discState, setSpinTarget } from './disc.js';
 import {
   initArcade, playById, toggleArcadeSound, focusArcade,
   getStats, coverDataURL, listGames,
@@ -34,8 +36,24 @@ const syncPause = () => { paused = pause.offscreen || pause.tabHidden || pause.m
 
 const clock = new THREE.Clock();
 
+/* Arrancar siempre desde arriba.
+   Son dos cosas distintas: el navegador RESTAURA el scroll al recargar
+   (scrollRestoration), y ademas salta al ancla si la URL trae hash. Lo del
+   hash solo se limpia cuando la navegacion es una recarga, para no romper los
+   enlaces directos a una seccion que alguien pueda compartir. */
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+const esRecarga = () => {
+  try { return performance.getEntriesByType('navigation')[0]?.type === 'reload'; }
+  catch { return false; }
+};
+if (esRecarga() && location.hash) {
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  initBoot();
+  window.scrollTo(0, 0);
+  lockScroll(true);
+  initBoot(onBootReady);
   armBootFailsafe();
   initArcadeSystem();
   // Ver BOOT_DRAW_MS: el 3D bloquea el hilo y se llevaria puesta la intro.
@@ -50,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCounters();
   initScrolly(document.getElementById('restauracion'));
   watchProcessSection();
+  wireIntroSkip();
   if (location.search.includes('debug')) exposeDiagnostics();
 });
 
@@ -79,6 +98,17 @@ function exposeDiagnostics() {
         ? sceneState.camera.position.toArray().map((n) => +n.toFixed(3))
         : 'no existe',
       webglPerdido: c?.getContext('webgl2')?.isContextLost?.() ?? 'n/d',
+
+      // Estado de la cinemática de carga y de las piezas que mueve.
+      introCorriendo: introActive(),
+      tapaTiempo: sceneState.clip
+        ? +(animState.action?.time ?? 0).toFixed(2) + ' / ' + sceneState.clip.duration.toFixed(2)
+        : 'n/d',
+      tapaDestino: animState.lidTarget ? 'abrir' : 'cerrar',
+      discoVisible: !!discState.mesh?.visible,
+      discoY: discState.mesh ? +discState.mesh.position.y.toFixed(4) : 'no existe',
+      discoGiro: +discState.spin.toFixed(2),
+      led: +animState.ledCurrent.toFixed(2),
     };
     console.table(info);
     return info;
@@ -104,8 +134,6 @@ function init3DSystem() {
     canvas,
     (percent) => setBootProgress(percent),
     (state) => {
-      finishBoot();
-
       /* El loop arranca SIEMPRE, aunque el modelo no haya cargado: así la
          vitrina al menos se pinta y no queda un rectángulo muerto. Lo que sí
          depende del modelo son las animaciones y el raycasting. */
@@ -113,21 +141,27 @@ function init3DSystem() {
       initScrollSync(state.container);
       startLoop();
 
-      if (!state.model) return;
+      if (state.model) {
+        initAnimations(state);
+        initIntro(state);            // crea el disco
+        initInteraction(state, {
+          onEject: () => toggleEject(),
+          onPower: () => syncPowerButton(togglePower()),
+          onReset: () => resetAll(),
+        });
+        if (interactState.controls) bindControls(interactState.controls);
 
-      initAnimations(state);
-      initInteraction(state, {
-        onEject: () => toggleEject(),
-        onPower: () => syncPowerButton(togglePower()),
-        onReset: () => resetAll(),
-      });
-      if (interactState.controls) bindControls(interactState.controls);
+        /* Un re-medido diferido: al cargar, las fuentes web todavía pueden
+           estar cambiando la altura del texto del hero, y eso mueve la
+           vitrina. Si el renderer se dimensionó con el tamaño viejo, queda
+           estirado. */
+        requestAnimationFrame(() => resizeToContainer());
+        setTimeout(() => resizeToContainer(), 400);
+      }
 
-      /* Un re-medido diferido: al cargar, las fuentes web todavía pueden estar
-         cambiando la altura del texto del hero, y eso mueve la vitrina. Si el
-         renderer se dimensionó con el tamaño viejo, queda estirado. */
-      requestAnimationFrame(() => resizeToContainer());
-      setTimeout(() => resizeToContainer(), 400);
+      /* Último a propósito: finishBoot puede ceder el control a la cinemática
+         en el acto, y esa necesita el disco ya creado. */
+      finishBoot();
     }
   );
 }
@@ -140,14 +174,36 @@ function startLoop() {
     if (paused) return;
     const dt = clock.getDelta();
     updateAnimations(dt, clock.getElapsedTime(), sceneState.model);
-    // El hero fijado manda sobre la cámara mientras está en pantalla;
-    // fuera de él vuelve el orbitado suave ligado al scroll.
-    if (!updateScrolly(camera, interactState.controls)) {
-      updateScrollCamera(camera, interactState.controls);
+    /* Prioridad sobre la cámara, de más específico a más general:
+       la cinemática de carga manda sobre todo; después la narrativa fijada
+       mientras está en pantalla; y si no, el orbitado suave ligado al scroll.
+       Dos módulos interpolando la misma cámara el mismo frame producen un
+       temblor que parece un problema de rendimiento. */
+    if (!updateIntro(camera, interactState.controls, dt)) {
+      syncDiscToLid();
+      if (!updateScrolly(camera, interactState.controls)) {
+        updateScrollCamera(camera, interactState.controls);
+      }
     }
     updateInteractions(camera);
     renderer.render(scene, camera);
   });
+}
+
+/**
+ * El disco frena cuando se abre la tapa y vuelve a girar al cerrarla.
+ *
+ * Es como funciona una consola de verdad —el interruptor de la tapa corta el
+ * motor— y sale gratis: la inercia ya está en updateDisc, así que alcanza con
+ * mover el objetivo. Le da vida al modelo sin animaciones nuevas, tanto si la
+ * tapa la movió el botón como si la está manejando el scroll.
+ */
+function syncDiscToLid() {
+  const c = sceneState.clip;
+  const a = animState.action;
+  if (!c || !a) return;
+  const abierta = a.time > c.duration * 0.25;
+  setSpinTarget(abierta ? 0 : 9);
 }
 
 function watchVisibility(container) {
@@ -171,6 +227,71 @@ function watchVisibility(container) {
     pause.modalOpen = !!e.detail?.open;
     syncPause();
   });
+}
+
+// ------------------------------------------------- cinematica de carga
+
+/** Mientras dura la intro el scroll se bloquea: la pagina todavia no esta. */
+function lockScroll(on) {
+  document.body.classList.toggle('intro-lock', !!on);
+}
+
+/**
+ * La parte 2D del arranque termino. Se pone la vitrina a pantalla completa y
+ * arranca la cinematica.
+ */
+function onBootReady() {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) { skipIntro(); clearBoot(); endIntro(); return; }
+
+  enterIntroStage();
+  startIntro({ onReveal: clearBoot, onDone: endIntro });
+}
+
+/** La vitrina sale del flujo y toma la pantalla entera. */
+function enterIntroStage() {
+  const v = document.getElementById('vitrine');
+  if (!v) return;
+  v.parentElement?.classList.add('holding');
+  v.classList.add('intro-stage');
+  resizeToContainer();
+}
+
+/**
+ * Fin de la cinematica: la vitrina vuelve a su caja del hero.
+ *
+ * El cambio de pantalla completa a la caja chica es un salto de tamano que no
+ * se puede interpolar barato —animar el alto dispara un resize del renderer en
+ * cada frame—, asi que se hace bajo un parpadeo de 200ms, justo mientras el
+ * titular del hero esta entrando y la atencion esta ahi.
+ */
+function endIntro() {
+  lockScroll(false);
+  window.scrollTo(0, 0);
+
+  const v = document.getElementById('vitrine');
+  if (!v) return;
+  if (!v.classList.contains('intro-stage')) return;
+
+  v.classList.add('swap');
+  setTimeout(() => {
+    v.classList.remove('intro-stage');
+    v.parentElement?.classList.remove('holding');
+    resizeToContainer();
+    requestAnimationFrame(() => v.classList.remove('swap'));
+  }, 200);
+}
+
+/** Saltar la intro: click en cualquier lado o Escape. */
+function wireIntroSkip() {
+  const salir = () => {
+    if (!introActive()) return;
+    skipIntro();
+    clearBoot();
+    endIntro();
+  };
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') salir(); });
+  document.getElementById('boot')?.addEventListener('click', salir);
 }
 
 // ---------------------------------------------------- mudanza de la vitrina

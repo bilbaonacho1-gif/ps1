@@ -13,6 +13,7 @@ export const animState = {
   clip: null,
   action: null,
   lidOpen: false,
+  lidTarget: 0,        // hacia donde va la tapa: 0 cerrada, 1 abierta
   powerOn: false,
   autoRotate: false,
   scrubbing: false,
@@ -66,27 +67,52 @@ export function setLidProgress(t) {
   a.time = Math.max(0, Math.min(1, t)) * animState.clip.duration;
   animState.mixer.update(0);
   animState.lidOpen = t > 0.5;
+  animState.lidTarget = animState.lidOpen ? 1 : 0;
 }
 
 /** Mientras el scroll manda sobre la tapa, los botones no deben pelearle. */
 export function setScrubMode(on) { animState.scrubbing = !!on; }
 
-/** Abre o cierra la tapa reproduciendo el mismo clip hacia adelante o atrás. */
+/**
+ * Abre o cierra la tapa reproduciendo el mismo clip hacia adelante o atrás.
+ *
+ * Invierte la INTENCIÓN y reproduce desde donde la tapa esté parada. Antes
+ * reposicionaba el tiempo al extremo opuesto (`a.time = 0` al abrir,
+ * `a.time = duration` al cerrar), y cuando el flag `lidOpen` quedaba
+ * desincronizado de la posición real —el scroll lo escribe por posición y el
+ * botón por intención— la tapa saltaba de golpe al otro extremo y volvía: el
+ * ciclo de abrir y cerrar que se veía. Sin tocar el tiempo, cada pulsación
+ * invierte el sentido desde el punto exacto en el que está, así que se puede
+ * alternar cuando se quiera, incluso a mitad del movimiento.
+ */
 export function toggleEject() {
   if (animState.scrubbing) return;
   const a = animState.action;
   if (!a || !animState.clip) return;
 
+  animState.lidTarget = animState.lidTarget ? 0 : 1;
+  animState.lidOpen = !!animState.lidTarget;
   a.paused = false;
-  if (!animState.lidOpen) {
-    a.timeScale = 1;
-    if (a.time >= animState.clip.duration) a.time = 0;
-    animState.lidOpen = true;
-  } else {
-    a.timeScale = -1;
-    if (a.time <= 0) a.time = animState.clip.duration;
-    animState.lidOpen = false;
-  }
+  a.timeScale = animState.lidTarget ? 1 : -1;
+}
+
+/**
+ * Vuelve a deducir el estado de la tapa desde la posición real del clip.
+ *
+ * Hace falta después de que algo la haya movido por posición —la cinemática de
+ * carga, el scroll— para que la primera pulsación del botón no salga invertida.
+ */
+export function syncLidFromClip() {
+  const a = animState.action;
+  const c = animState.clip;
+  if (!a || !c) return;
+  animState.lidOpen = a.time > c.duration * 0.5;
+  animState.lidTarget = animState.lidOpen ? 1 : 0;
+}
+
+/** Intensidad del LED de encendido. El loop interpola hacia este valor. */
+export function setLed(intensity) {
+  animState.ledTarget = intensity;
 }
 
 export function togglePower() {

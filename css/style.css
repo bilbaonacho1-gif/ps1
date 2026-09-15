@@ -1342,21 +1342,53 @@ body.booted .line > span {
 }
 .boot-read b { color: var(--grey-1); font-weight: 400; }
 
-/* --- salida --- */
+/* --- salida en dos tiempos --- */
 
-/* La cortina sube y descubre la pagina, en vez de un fundido plano. */
-.boot-curtain {
-  position: absolute;
-  inset: 0;
-  background: var(--black);
-  transform: translateY(100%);
-}
-.boot.out .boot-stage { opacity: 0; transform: translateY(-14px); }
-.boot.out {
-  transition: transform 0.85s var(--ease) 0.18s;
-  transform: translateY(-100%);
+/* 1. Se apagan los simbolos y la barra, pero el fondo negro SE QUEDA: detras
+      arranca la cinematica 3D y ese negro es su telon. */
+.boot.cinema .boot-stage { opacity: 0; transform: translateY(-14px); }
+
+/* 2. La pagina se descubre atenuando el telon, no corriendolo de lado. Un
+      barrido taparia la consola justo cuando la camara se esta alejando, que
+      es el momento que hay que ver. */
+.boot.clear {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s var(--ease);
 }
 .boot.gone { display: none; }
+
+/* --- escenario de la cinematica --- */
+
+/* Durante la carga la vitrina sale del flujo y toma la pantalla entera, para
+   que la consola se vea en primer plano y no metida en su columna del hero. */
+.vitrine.intro-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  width: auto;
+  height: auto;
+  max-width: none;
+  margin: 0;
+  aspect-ratio: auto;
+}
+/* Adornos de la vitrina apagados: el halo y la etiqueta estan pensados para
+   una caja chica y a pantalla completa se ven enormes y fuera de lugar. */
+.vitrine.intro-stage::before,
+.vitrine.intro-stage::after,
+.vitrine.intro-stage .vitrine-label { opacity: 0; }
+
+/* Al salir del flujo deja un hueco: sin esto el grid del hero colapsa y el
+   texto se reacomoda justo cuando aparece la pagina. */
+.vitrine-slot.holding { aspect-ratio: 1 / 1; }
+
+/* El paso de pantalla completa a la caja del hero se hace bajo un parpadeo
+   corto, mientras la atencion esta en el titular que entra. */
+.vitrine { transition: opacity 0.2s linear; }
+.vitrine.swap { opacity: 0; }
+
+/* Scroll bloqueado mientras corre la intro: la pagina todavia no esta. */
+body.intro-lock { overflow: hidden; }
 
 /* -------------------------------------------------------------- reveal */
 

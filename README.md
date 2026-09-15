@@ -95,6 +95,55 @@ Tres decisiones que la sostienen:
 El largo de cada trazo se mide con `getTotalLength()` en vez de escribirse a
 mano, así se puede cambiar cualquier símbolo en el HTML sin tocar el JS.
 
+### 4b-bis. Cinemática de carga: el disco (js/intro.js, js/disc.js)
+
+Cuando termina la parte 2D del arranque, el telón negro se queda y detrás
+aparece la consola en primer plano: la tapa se abre, entra un disco, la tapa se
+cierra, prende el LED y la cámara se aleja hasta descubrir la página. La carga
+de la web se cuenta como lo que sería cargar un juego.
+
+- **El disco no está en el GLB.** El modelo trae el lector (`reader_low`) y el
+  mecanismo (`cdreader_low`), pero no el CD: se construye en `js/disc.js` con un
+  `RingGeometry` a doble cara. No se modela el canto porque 1,2 mm a la escala
+  del modelo es menos de un píxel. Posición y radio salen de **medir** el nodo
+  del lector en tiempo de ejecución, no de constantes: el modelo se normaliza al
+  cargar, así que cualquier número a mano se rompería al tocar `TARGET_WIDTH`.
+- **El remate no salta.** La cámara termina exactamente en el encuadre que
+  `scroll.js` calcula para el tope de la página (verificado: la cinemática cierra
+  en `[0.392, 0.262, 0.399]` contra el objetivo `[0.396, 0.26, 0.396]`), así que
+  al devolver el control no hay corte.
+- **Todo por tiempo transcurrido, no por cadenas de `setTimeout`.** Si un frame
+  tarda de más —parseo, shaders, una pestaña que vuelve del fondo— la línea de
+  tiempo se evalúa igual en el tiempo real que corresponde.
+- El disco **frena al abrir la tapa** y vuelve a girar al cerrarla, como el
+  interruptor de tapa de una consola real.
+- Se puede saltar con Escape o un click, y `prefers-reduced-motion` la omite.
+
+Las marcas de tiempo son las constantes `T` arriba de `js/intro.js`: editar ahí
+cambia el ritmo. La cinemática dura 3,85 s.
+
+### 4d. Arrancar siempre desde arriba
+
+Son dos cosas distintas y hacen falta las dos: el navegador **restaura** el
+scroll al recargar (`history.scrollRestoration = 'manual'`) y además **salta al
+ancla** si la URL trae hash. El hash se limpia solo cuando la navegación es una
+recarga (`performance.getEntriesByType('navigation')[0].type === 'reload'`), para
+no romper los enlaces directos a una sección que alguien comparta.
+
+Mientras corre la intro el scroll queda bloqueado con `body.intro-lock`: la
+página todavía no está.
+
+### 4e. La tapa se alterna cuando se quiera
+
+`toggleEject()` invierte la **intención** y reproduce desde donde la tapa esté
+parada. Antes reposicionaba el tiempo al extremo opuesto, y cuando el flag
+`lidOpen` quedaba desincronizado de la posición real —el scroll lo escribe por
+posición, el botón por intención— la tapa saltaba de golpe al otro extremo y
+volvía: se veía como un ciclo de abrir y cerrar. Sin tocar el tiempo, cada
+pulsación invierte el sentido desde el punto exacto, incluso a mitad del
+movimiento. `syncLidFromClip()` vuelve a deducir el estado desde el clip después
+de que la cinemática o el scroll la hayan movido por posición.
+
 ### 4c. Hero de una pantalla + narrativa reubicada
 
 El hero ocupa **una sola pantalla** y no secuestra el scroll: el movimiento lo
