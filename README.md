@@ -85,5 +85,50 @@ Esta sección detalla las decisiones de arquitectura 3D, WebGL y manipulaciones 
 
 - **HTML5 & CSS3 Vanilla** (Variables CSS, CSS Grid/Flexbox, CRT scanlines overlay, Google Fonts Archivo Black & Silkscreen)
 - **JavaScript ES Modules** (Sin bundlers, producción lista para Netlify/Vercel)
-- **Three.js r169** (Import map desde CDN)
+- **Three.js r169** (incluido en `vendor/`, sin CDN)
 - **GLTFLoader, OrbitControls, RoomEnvironment**
+
+---
+
+## 📦 Dependencias incluidas (`vendor/`)
+
+Three.js r169 viene incluido en el repositorio en lugar de cargarse desde un
+CDN, así que el sitio funciona sin conexión y no se rompe si el CDN se cae o
+cambia de versión. El import map de `index.html` apunta a rutas relativas:
+
+```json
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+```
+
+Se incluyen solo los archivos que el proyecto usa realmente (~1,4 MB):
+
+```
+vendor/three/build/three.module.js
+vendor/three/addons/controls/OrbitControls.js
+vendor/three/addons/environments/RoomEnvironment.js
+vendor/three/addons/loaders/GLTFLoader.js
+vendor/three/addons/utils/BufferGeometryUtils.js   (lo requiere GLTFLoader)
+```
+
+Three.js es software libre bajo licencia MIT; el texto de la licencia está en
+`vendor/three/LICENSE`.
+
+Para actualizar a una versión nueva de Three.js:
+
+```bash
+npm pack three@<version>
+tar xzf three-<version>.tgz
+cp package/build/three.module.js vendor/three/build/
+cp package/examples/jsm/controls/OrbitControls.js vendor/three/addons/controls/
+cp package/examples/jsm/environments/RoomEnvironment.js vendor/three/addons/environments/
+cp package/examples/jsm/loaders/GLTFLoader.js vendor/three/addons/loaders/
+cp package/examples/jsm/utils/BufferGeometryUtils.js vendor/three/addons/utils/
+```
+
+> Las tipografías (Archivo, Inter, Silkscreen) se siguen cargando desde Google
+> Fonts. Si también las querés offline, hay que descargarlas e incluirlas igual.
