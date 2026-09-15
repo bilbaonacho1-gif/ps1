@@ -12,6 +12,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { setDragging } from './animations.js';
 
 export const interactState = {
   controls: null,
@@ -48,6 +49,11 @@ export function initInteraction(sceneState, callbacks) {
   controls.maxPolarAngle = Math.PI / 2 - 0.06;
   controls.update();
   interactState.controls = controls;
+
+  /* Mientras el usuario orbita, la deriva idle se suspende, y vuelve recien
+     un rato despues de que suelta. */
+  controls.addEventListener('start', () => setDragging(true));
+  controls.addEventListener('end', () => setDragging(false));
 
   // Mallas clickeables
   interactState.meshes.length = 0;

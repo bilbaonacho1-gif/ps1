@@ -70,8 +70,50 @@ Esta sección detalla las decisiones de arquitectura 3D, WebGL y manipulaciones 
   tooltipElement.style.top = `${y}px`;
   ```
 
+### 4b. Secuencia de arranque (js/boot.js)
+
+La intro es un homenaje al encendido de una consola de 32 bits, en cuatro fases:
+los cuatro símbolos (△ ○ ✕ □) se dibujan trazo por trazo con `stroke-dasharray`
+y `stroke-dashoffset`, prenden en sus colores, se acomodan en rombo, y recién
+entonces entra la marca. Al final una cortina sube y descubre el hero, que a su
+vez entra escalonado.
+
+Tres decisiones que la sostienen:
+
+- **La barra mide carga real.** El porcentaje viene del `onProgress` del
+  GLTFLoader, no de un temporizador. Si el modelo tarda, la intro espera.
+- **El 3D arranca DESPUÉS de la primera fase.** Inicializar la escena y parsear
+  el GLB bloquea el hilo principal cerca de dos segundos. Arrancándolo junto con
+  la intro, los `setTimeout` de las fases se encolan y salen todos juntos al
+  liberarse el hilo: la secuencia entera se aplasta en un frame. Reservar la
+  fase del dibujo (`BOOT_DRAW_MS`) le da pista libre al gesto que hay que ver.
+- **Dos pisos de tiempo, no uno.** Uno global evita el parpadeo cuando todo
+  viene de caché; otro protege a la marca, medido desde que la marca *apareció*
+  y no desde que arrancó la página, porque si el hilo se bloqueó la marca puede
+  entrar tardísimo y durar cien milisegundos antes de que suba la cortina.
+
+El largo de cada trazo se mide con `getTotalLength()` en vez de escribirse a
+mano, así se puede cambiar cualquier símbolo en el HTML sin tocar el JS.
+
+### 4c. Hero de una pantalla + narrativa reubicada
+
+El hero ocupa **una sola pantalla** y no secuestra el scroll: el movimiento lo
+ponen la entrada escalonada y una deriva idle lenta del modelo, que se suspende
+mientras el usuario arrastra y mientras el scroll maneja la tapa.
+
+La narrativa larga —la sección alta con el contenido pegado, donde bajar *es*
+abrir la tapa— vive ahora en `#restauracion`, donde el gesto significa algo.
+Como hay un solo canvas WebGL en todo el documento, la vitrina viaja al slot de
+la sección que está en pantalla mediante un `IntersectionObserver`.
+
+> Ese observer **no** puede usar un `threshold` por proporción: la sección mide
+> varias pantallas de alto, y un elemento de 2880px en un viewport de 900px
+> nunca llega a estar 35% visible —su máximo es 31%—, así que no se dispararía
+> nunca. El criterio es un `rootMargin` negativo: "la sección toca la banda
+> central del viewport", que se cumple sea cual sea su alto.
+
 ### 5. Sincronización del Scroll y Cámara Cinespace (js/scroll.js)
-- **Lerp Multi-Waypoint**: El progreso de desplazamiento vertical de la página se normaliza entre `0` y `1`. Se definen 5 waypoints clave (Hero, Proceso, Specs, Catálogo, Garantía).
+- **Lerp Multi-Waypoint**: El progreso de desplazamiento vertical de la página se normaliza entre `0` y `1`. Se definen 5 waypoints clave (Hero, Restauración, Specs, Catálogo, Garantía).
 - En cada frame del loop de animación, se interpola suavemente la posición y el objetivo (*lookAt*) de la cámara usando `lerpVectors` con un coeficiente de amortiguación de `0.06`, evitando saltos bruscos.
 
 ### 6. Rendimiento y Accesibilidad (js/main.js & css/style.css)

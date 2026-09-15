@@ -16,6 +16,8 @@ export const animState = {
   powerOn: false,
   autoRotate: false,
   scrubbing: false,
+  dragging: false,
+  lastInput: -1e9,
   led: null,
   ledTarget: 0,
   ledCurrent: 0,
@@ -132,8 +134,34 @@ export function updateAnimations(dt, elapsed, pivot) {
 
   if (pivot) {
     pivot.position.y = Math.sin(elapsed * 1.4) * 0.004;
-    if (animState.autoRotate) pivot.rotation.y += 0.007;
+
+    if (animState.autoRotate) {
+      pivot.rotation.y += 0.007;            // giro pedido con el boton
+    } else if (!animState.scrubbing && !animState.dragging &&
+               performance.now() - animState.lastInput > IDLE_WAIT) {
+      /* Deriva idle: seis veces mas lenta que el giro del boton, apenas
+         suficiente para que la consola no parezca una foto. Se corta mientras
+         el scroll maneja la tapa —dos cosas moviendose a la vez marean— y
+         mientras el usuario esta arrastrando, porque pelearle al dedo es la
+         forma mas rapida de que un visor 3D se sienta roto. */
+      pivot.rotation.y += 0.0012;
+    }
   }
+}
+
+/** Espera antes de retomar la deriva idle despues de que el usuario suelta. */
+const IDLE_WAIT = 2600;
+
+/**
+ * La llama interact.js al empezar y terminar un arrastre.
+ *
+ * Deliberadamente NO se engancha al evento 'change' de OrbitControls: ese
+ * evento tambien se dispara cuando el scroll mueve la camara por codigo, o
+ * sea en todos los frames, y la deriva idle no arrancaria nunca.
+ */
+export function setDragging(on) {
+  animState.dragging = on;
+  animState.lastInput = performance.now();
 }
 
 // -------------------------------------------------------- arranque / CRT

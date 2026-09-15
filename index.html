@@ -1,7 +1,11 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="no-js">
 <head>
 <meta charset="UTF-8">
+<!-- Marca que el JS corre. Todo lo que arranca oculto (el boot, la entrada
+     escalonada del hero) se muestra igual si este script no llega a correr:
+     preferimos la pagina sin coreografia antes que una pantalla en negro. -->
+<script>document.documentElement.className = 'js';</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RESET R-02 — Consola de 32 bits restaurada</title>
 <meta name="description" content="Consolas de 32 bits restauradas a mano: recapadas, recalibradas y testeadas 48 horas. Miralas en 3D y probá el cartucho antes de comprar.">
@@ -18,10 +22,43 @@
 </head>
 <body>
 
-<div id="loader" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-  <span class="loader-mark">RESET</span>
-  <div class="loader-track"><div id="loader-fill" class="loader-fill"></div></div>
-  <span id="loader-status" class="loader-status">Cargando modelo 0%</span>
+<!-- ============================ BOOT ================================
+     Secuencia de arranque, homenaje al encendido de una consola de 32 bits:
+     los cuatro símbolos se dibujan uno tras otro, prenden en color, se
+     acomodan en rombo y recién ahí aparece la marca. La barra sigue la carga
+     real del GLB. Ver js/boot.js.                                          -->
+<div id="boot" class="boot" role="progressbar" aria-valuenow="0" aria-valuemin="0"
+     aria-valuemax="100" aria-label="Encendiendo">
+  <div class="boot-stage">
+
+    <div class="boot-glyphs" aria-hidden="true">
+      <span class="glyph" data-glyph="tri" style="--i:0">
+        <svg viewBox="0 0 64 64"><path d="M32 13 L53 50 L11 50 Z"/></svg>
+      </span>
+      <span class="glyph" data-glyph="cir" style="--i:1">
+        <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="19"/></svg>
+      </span>
+      <span class="glyph" data-glyph="cross" style="--i:2">
+        <svg viewBox="0 0 64 64"><path d="M17 17 L47 47"/><path d="M47 17 L17 47"/></svg>
+      </span>
+      <span class="glyph" data-glyph="sq" style="--i:3">
+        <svg viewBox="0 0 64 64"><rect x="14" y="14" width="36" height="36"/></svg>
+      </span>
+    </div>
+
+    <div class="boot-mark"><span class="boot-mark-in">RESET <b>R-02</b></span></div>
+    <div class="boot-sub">Consola de 32 bits &middot; restaurada a mano</div>
+
+    <div class="boot-meter">
+      <div class="boot-track"><i id="boot-fill" class="boot-fill"></i></div>
+      <div class="boot-read">
+        <span id="boot-stage-label">Iniciando</span>
+        <span><b id="boot-pct">0</b>%</span>
+      </div>
+    </div>
+
+  </div>
+  <div class="boot-curtain" aria-hidden="true"></div>
 </div>
 
 <!-- Barra fija: qué producto, cuánto sale, dónde comprarlo. Siempre visible. -->
@@ -29,7 +66,7 @@
   <div class="bar-brand">RESET <span>R-02</span></div>
   <nav>
     <ul class="bar-nav">
-      <li><a href="#proceso">Restauración</a></li>
+      <li><a href="#restauracion">Restauración</a></li>
       <li><a href="#arcade">Arcade</a></li>
       <li><a href="#catalogo">Modelos</a></li>
       <li><a href="#specs">Ficha técnica</a></li>
@@ -46,77 +83,64 @@
 <main>
 
   <!-- ============================== HERO ==============================
-       Sección de tres pantallas de alto con el contenido pegado adentro:
-       el scroll no mueve la escena, la ANIMA. Ver js/scrolly.js.          -->
-  <section class="scrolly" id="hero">
-    <div class="scrolly-inner">
-      <div class="hero">
-        <div class="hero-copy">
-          <!-- Tres capítulos que se relevan según el avance del scroll -->
-          <div class="chapter on" data-chapter="0">
-            <span class="kicker">Consola de 32 bits · <em>restaurada a mano</em></span>
-            <h1 class="h-xl hero-title">No es usada.<br>Está reconstruida.</h1>
-            <p class="lead">
-              Cada unidad se desarma pieza por pieza, se limpia por ultrasonido
-              y se recapa con condensadores japoneses nuevos.
-            </p>
-          </div>
+       Una sola pantalla. No secuestra el scroll: el movimiento lo pone la
+       entrada escalonada (js/boot.js) y el giro suave del modelo. La
+       narrativa larga de la tapa vive más abajo, en #restauracion.        -->
+  <section class="hero-stage" id="hero">
+    <div class="hero">
+      <div class="hero-copy">
 
-          <div class="chapter" data-chapter="1">
-            <span class="kicker">Paso 03 · <em>recalibración óptica</em></span>
-            <h2 class="h-xl hero-title">Se abre.<br>Y adentro está sana.</h2>
-            <p class="lead">
-              La ganancia del diodo láser se ajusta con osciloscopio, no a ojo.
-              Por eso lee discos que otras consolas rechazan.
-            </p>
-          </div>
+        <span class="kicker seq" style="--d:0">
+          Consola de 32 bits &middot; <em>restaurada a mano</em>
+        </span>
 
-          <div class="chapter" data-chapter="2">
-            <span class="kicker">Paso 04 · <em>48 horas de prueba</em></span>
-            <h2 class="h-xl hero-title">Y recién ahí<br>sale del taller.</h2>
-            <p class="lead">
-              Dos días completos corriendo benchmarks en cámara térmica, hasta
-              garantizar que no haya un solo salto de lectura.
-            </p>
-          </div>
+        <h1 class="h-xl hero-title">
+          <span class="line seq" style="--d:1"><span>No es usada.</span></span>
+          <span class="line seq" style="--d:2"><span>Está reconstruida.</span></span>
+        </h1>
 
-          <div class="hero-actions">
-            <a href="#catalogo" class="btn btn-accent">Ver modelos</a>
-            <button id="btn-eject" class="btn">Abrir la tapa</button>
-            <button id="btn-rotate" class="btn btn-quiet">Rotar 360°</button>
-          </div>
+        <p class="lead seq" style="--d:3">
+          Cada unidad se desarma pieza por pieza, se limpia por ultrasonido
+          y se recapa con condensadores japoneses nuevos.
+        </p>
 
-          <div class="hero-facts">
-            <div>
-              <div class="fact-n"><span data-count="48" data-suffix=" h">48 h</span></div>
-              <div class="fact-l">Test de estrés</div>
-            </div>
-            <div>
-              <div class="fact-n"><span data-count="100" data-suffix=" %">100 %</span></div>
-              <div class="fact-l">Condensadores nuevos</div>
-            </div>
-            <div>
-              <div class="fact-n"><span data-count="12">12</span></div>
-              <div class="fact-l">Meses de garantía</div>
-            </div>
+        <div class="hero-actions seq" style="--d:4">
+          <a href="#catalogo" class="btn btn-accent">Ver modelos</a>
+          <button id="btn-eject" class="btn">Abrir la tapa</button>
+          <button id="btn-rotate" class="btn btn-quiet">Rotar 360&deg;</button>
+        </div>
+
+        <div class="hero-facts seq" style="--d:5">
+          <div>
+            <div class="fact-n"><span data-count="48" data-suffix=" h">48 h</span></div>
+            <div class="fact-l">Test de estrés</div>
+          </div>
+          <div>
+            <div class="fact-n"><span data-count="100" data-suffix=" %">100 %</span></div>
+            <div class="fact-l">Condensadores nuevos</div>
+          </div>
+          <div>
+            <div class="fact-n"><span data-count="12">12</span></div>
+            <div class="fact-l">Meses de garantía</div>
           </div>
         </div>
 
-        <!-- La vitrina: único lugar del DOM con el canvas WebGL.
-             Se muda al catálogo cuando pedís "Ver en 3D". -->
-        <div class="vitrine-slot" id="vitrine-home">
-          <div class="vitrine" id="vitrine">
-            <canvas id="webgl-canvas" aria-label="Modelo 3D interactivo de la consola. Arrastrá para rotarla."></canvas>
-            <span class="vitrine-label">Arrastrá para rotar · el scroll abre la tapa</span>
-          </div>
-        </div>
       </div>
 
-      <div class="scroll-hint" aria-hidden="true">
-        <span>Desplazá</span>
-        <span class="scroll-line"></span>
+      <!-- La vitrina: único lugar del DOM con el canvas WebGL. Se muda al
+           catálogo con "Ver en 3D" y a #restauracion al entrar esa sección. -->
+      <div class="vitrine-slot" id="vitrine-home">
+        <div class="vitrine" id="vitrine">
+          <canvas id="webgl-canvas" aria-label="Modelo 3D interactivo de la consola. Arrastrá para rotarla."></canvas>
+          <span class="vitrine-label">Arrastrá para rotar</span>
+        </div>
       </div>
     </div>
+
+    <a class="scroll-hint seq" style="--d:6" href="#opiniones">
+      <span>Desplazá</span>
+      <span class="scroll-line"></span>
+    </a>
   </section>
 
   <div id="tooltips" aria-hidden="true">
@@ -212,6 +236,52 @@
             </span>
           </span>
         </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== RESTAURACION (scrolly) ====================
+       Acá sí se secuestra el scroll, y acá tiene sentido: el gesto de bajar
+       ES el gesto de abrir la tapa. La vitrina se muda a esta sección
+       mientras está en pantalla y vuelve al hero al salir.                -->
+  <section class="scrolly" id="restauracion">
+    <div class="scrolly-inner">
+      <div class="hero">
+        <div class="hero-copy">
+
+          <div class="chapter on" data-chapter="0">
+            <span class="kicker">Paso 02 &middot; <em>recapacitación</em></span>
+            <h2 class="h-lg hero-title">Primero se abre<br>del todo.</h2>
+            <p class="lead">
+              Los electrolíticos de los noventa se secan. Salen todos, sin
+              excepción, incluso en las unidades que llegan funcionando.
+            </p>
+          </div>
+
+          <div class="chapter" data-chapter="1">
+            <span class="kicker">Paso 03 &middot; <em>recalibración óptica</em></span>
+            <h2 class="h-lg hero-title">Se abre.<br>Y adentro está sana.</h2>
+            <p class="lead">
+              La ganancia del diodo láser se ajusta con osciloscopio, no a ojo.
+              Por eso lee discos que otras consolas rechazan.
+            </p>
+          </div>
+
+          <div class="chapter" data-chapter="2">
+            <span class="kicker">Paso 04 &middot; <em>48 horas de prueba</em></span>
+            <h2 class="h-lg hero-title">Y recién ahí<br>sale del taller.</h2>
+            <p class="lead">
+              Dos días completos corriendo benchmarks en cámara térmica, hasta
+              garantizar que no haya un solo salto de lectura.
+            </p>
+          </div>
+
+          <div class="scrolly-steps" aria-hidden="true">
+            <i class="on"></i><i></i><i></i>
+          </div>
+        </div>
+
+        <div class="vitrine-slot" id="vitrine-process"></div>
       </div>
     </div>
   </section>

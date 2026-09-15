@@ -18,6 +18,7 @@ import {
 import { initInteraction, updateInteractions, interactState } from './interact.js';
 import { initScrollSync, updateScrollCamera, setScrollContainer, bindControls } from './scroll.js';
 import { initScrolly, updateScrolly, initReadingProgress, initCounters } from './scrolly.js';
+import { initBoot, setBootProgress, finishBoot, armBootFailsafe, BOOT_DRAW_MS } from './boot.js';
 import {
   initArcade, playById, toggleArcadeSound, focusArcade,
   getStats, coverDataURL, listGames,
@@ -34,8 +35,11 @@ const syncPause = () => { paused = pause.offscreen || pause.tabHidden || pause.m
 const clock = new THREE.Clock();
 
 document.addEventListener('DOMContentLoaded', () => {
+  initBoot();
+  armBootFailsafe();
   initArcadeSystem();
-  init3DSystem();
+  // Ver BOOT_DRAW_MS: el 3D bloquea el hilo y se llevaria puesta la intro.
+  setTimeout(init3DSystem, BOOT_DRAW_MS);
   wireUI();
   buildFlipCards();
   buildGameChips();
@@ -44,7 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupReveal();
   initReadingProgress();
   initCounters();
-  initScrolly(document.getElementById('hero'));
+  initScrolly(document.getElementById('restauracion'));
+  watchProcessSection();
   if (location.search.includes('debug')) exposeDiagnostics();
 });
 
@@ -93,21 +98,13 @@ function initArcadeSystem() {
 
 function init3DSystem() {
   const canvas = document.getElementById('webgl-canvas');
-  const loader = document.getElementById('loader');
-  const fill = document.getElementById('loader-fill');
-  const status = document.getElementById('loader-status');
   if (!canvas) return;
 
   initScene(
     canvas,
-    (percent) => {
-      if (fill) fill.style.width = `${percent}%`;
-      if (status) status.textContent = `Cargando modelo ${percent}%`;
-      loader?.setAttribute('aria-valuenow', String(percent));
-    },
+    (percent) => setBootProgress(percent),
     (state) => {
-      if (fill) fill.style.width = '100%';
-      setTimeout(() => loader?.classList.add('hidden'), 260);
+      finishBoot();
 
       /* El loop arranca SIEMPRE, aunque el modelo no haya cargado: así la
          vitrina al menos se pinta y no queda un rectángulo muerto. Lo que sí
@@ -186,15 +183,57 @@ function watchVisibility(container) {
  * viva y no hay que recrear nada; solo re-medir, porque el contenedor nuevo
  * puede tener otro tamaño.
  */
-function moveVitrine(targetId) {
+function placeVitrine(targetId) {
   const vitrine = document.getElementById('vitrine');
   const target = document.getElementById(targetId);
-  if (!vitrine || !target || vitrine.parentElement === target) return;
+  if (!vitrine || !target || vitrine.parentElement === target) return false;
 
   target.appendChild(vitrine);
   setScrollContainer(vitrine);
   resizeToContainer();
-  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return true;
+}
+
+/** Mudanza pedida por el usuario: mueve Y lleva la vista hasta ahi. */
+function moveVitrine(targetId) {
+  if (!placeVitrine(targetId)) return;
+  document.getElementById(targetId)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/**
+ * Mudanza automatica entre el hero y la narrativa de restauracion.
+ *
+ * Hay un solo canvas WebGL en todo el documento —tener dos contextos vivos
+ * por una transicion visual es caro y ademas el segundo se pierde apenas el
+ * navegador decide reclamar memoria— asi que la vitrina viaja al slot de la
+ * seccion que esta en pantalla.
+ *
+ * El disparo NO puede depender de un threshold por proporcion: la seccion
+ * mide varias pantallas de alto, y un elemento de 2880px en un viewport de
+ * 900px nunca llega a estar 35% visible —su maximo es 31%—, asi que el
+ * observer no se dispararia nunca. Con rootMargin negativo el criterio pasa a
+ * ser "la seccion toca la banda central del viewport", que se cumple igual sea
+ * cual sea su alto y no rebota si el usuario hace scroll fino sobre el borde.
+ *
+ * Si el usuario mando la vitrina al catalogo con "Ver en 3D", no se la
+ * sacamos: esa mudanza fue explicita y manda sobre la automatica.
+ */
+function watchProcessSection() {
+  const section = document.getElementById('restauracion');
+  const vitrine = document.getElementById('vitrine');
+  if (!section || !vitrine || !('IntersectionObserver' in window)) return;
+
+  const AUTO = new Set(['vitrine-home', 'vitrine-process']);
+
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!AUTO.has(vitrine.parentElement?.id)) return;
+      placeVitrine(e.isIntersecting ? 'vitrine-process' : 'vitrine-home');
+    }
+  }, { threshold: 0, rootMargin: '-35% 0px -35% 0px' });
+
+  io.observe(section);
 }
 
 // ------------------------------------------------------------ fichas 3D/2D

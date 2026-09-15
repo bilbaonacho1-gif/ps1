@@ -26,6 +26,7 @@ const state = {
   progress: 0,
   active: false,
   chapters: [],
+  steps: [],
 };
 
 /** Progreso 0..1 de la sección alta a través del viewport. */
@@ -98,12 +99,21 @@ export function updateScrolly(camera, controls) {
   }
 
   // Relevo de los bloques de texto: cada uno manda en su tercio del recorrido.
+  const n = state.chapters.length;
   state.chapters.forEach((el, i) => {
-    const from = i / state.chapters.length;
-    const to = (i + 1) / state.chapters.length;
+    const from = i / n;
+    const to = (i + 1) / n;
     const on = t >= from - 0.04 && t < to + 0.04;
     el.classList.toggle('on', on);
   });
+
+  /* Indicador de paso. Usa el tercio crudo, sin el solape de 0.04 que tienen
+     los textos: durante el cruce hay dos capitulos visibles a la vez, pero
+     dos marcas prendidas se leerian como un error. */
+  if (state.steps.length) {
+    const active = Math.min(n - 1, Math.floor(t * n));
+    state.steps.forEach((el, i) => el.classList.toggle('on', i === active));
+  }
 
   return state.active;
 }
@@ -113,6 +123,7 @@ export function initScrolly(sectionEl) {
   if (!sectionEl) return;
 
   state.chapters = [...sectionEl.querySelectorAll('[data-chapter]')];
+  state.steps = [...sectionEl.querySelectorAll('.scrolly-steps i')];
 
   window.addEventListener('scroll', computeProgress, { passive: true });
   window.addEventListener('resize', computeProgress);

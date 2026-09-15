@@ -241,6 +241,72 @@ a { color: inherit; }
 /* Sección alta + contenido pegado = tiempo de scroll.
    Los 320svh no son decorativos: son la duración de la escena. Menos de
    ~250svh y la tapa se abre de golpe; más de ~400svh y se hace tedioso. */
+/* --------------------------------------------------------- sin JS */
+
+/* Si el script inline no corrio, nada de lo que depende de JS debe esconder
+   contenido: el boot no se muestra y el hero aparece entero. */
+.no-js .boot { display: none; }
+.no-js .seq { opacity: 1; transform: none; }
+.no-js .line > span { transform: none; }
+
+/* ------------------------------------------------------------ hero */
+
+/* Una sola pantalla, sin secuestrar el scroll. El hero ya no crece a 320svh:
+   el movimiento lo ponen la entrada escalonada y el giro del modelo, no el
+   hecho de obligarte a scrollear tres pantallas para pasar de largo. */
+.hero-stage {
+  min-height: calc(100svh - var(--bar-h));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  padding: 3rem 0 5.5rem;
+}
+
+/* --- entrada escalonada despues del boot ---
+   Los elementos esperan a que <body> reciba .booted. El desfasaje sale de
+   --d, asi el orden se declara en el HTML y no hace falta una regla por
+   elemento. */
+.seq {
+  opacity: 0;
+  transform: translateY(18px);
+}
+body.booted .seq {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.72s var(--ease) calc(var(--d) * 85ms),
+              transform 0.72s var(--ease) calc(var(--d) * 85ms);
+}
+
+/* Revelado por mascara para los renglones del titular: el texto sube desde
+   abajo de su propia caja. Es el gesto que mas "producido" se ve y cuesta
+   dos reglas. */
+.line { display: block; overflow: hidden; }
+.line > span {
+  display: block;
+  transform: translateY(105%);
+}
+body.booted .line > span {
+  transform: none;
+  transition: transform 0.85s var(--ease) calc(var(--d) * 85ms);
+}
+/* La mascara no puede recortar tildes ni colas: un poco de aire abajo. */
+.hero-title .line { padding-bottom: 0.08em; margin-bottom: -0.08em; }
+
+/* Indicador de paso dentro de la narrativa por scroll. */
+.scrolly-steps {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 2.4rem;
+}
+.scrolly-steps i {
+  width: 26px;
+  height: 2px;
+  background: var(--line-2);
+  transition: background var(--t) var(--ease);
+}
+.scrolly-steps i.on { background: var(--accent); }
+
 .scrolly {
   height: 320svh;
   position: relative;
@@ -259,8 +325,17 @@ a { color: inherit; }
 /* Los tres capítulos ocupan la MISMA celda de la grilla y se relevan por
    opacidad. Apilarlos así evita que el bloque salte de alto al cambiar de
    texto, que es lo que delata una transición mal hecha. */
-.hero-copy { display: grid; }
-.hero-copy > .chapter { grid-area: 1 / 1; }
+/* Apilado SOLO dentro de la narrativa por scroll: ahi los tres capitulos
+   comparten celda y se relevan por opacidad, y apilarlos evita que el bloque
+   salte de alto al cambiar de texto.
+
+   El hero ya no usa esta grilla. Cuando la usaba, sus elementos quedaban
+   clavados a filas fijas (2 y 3), y al sacarle los capitulos el titular y la
+   bajada se auto-ubicaban DESPUES de los botones. Acotar la regla es lo que
+   mantiene el orden de lectura igual al orden del HTML. */
+.scrolly .hero-copy { display: grid; }
+.scrolly .hero-copy > .chapter { grid-area: 1 / 1; }
+.scrolly .hero-copy > .scrolly-steps { grid-area: 2 / 1; }
 
 .chapter {
   opacity: 0;
@@ -270,12 +345,11 @@ a { color: inherit; }
 }
 .chapter.on { opacity: 1; transform: none; pointer-events: auto; }
 
-/* Las acciones y las cifras van debajo del bloque apilado, no dentro. */
-.hero-actions, .hero-facts { grid-area: 2 / 1; }
-.hero-facts { grid-area: 3 / 1; }
+
 
 /* Indicador de "seguí bajando": una línea que cae en loop. */
 .scroll-hint {
+  text-decoration: none;
   position: absolute;
   left: 50%;
   bottom: 1.6rem;
@@ -363,7 +437,20 @@ a { color: inherit; }
   margin-top: 0.4rem;
 }
 
-@media (max-width: 980px) { .hero { grid-template-columns: 1fr; } }
+@media (max-width: 980px) {
+  .hero { grid-template-columns: 1fr; }
+
+  /* En vertical el producto va PRIMERO. Apilado al reves, el modelo queda
+     debajo de todo el bloque de texto y en un telefono no se ve nunca sin
+     scrollear: el hero pierde justo lo que lo hace distinto. */
+  .hero-stage .vitrine-slot { order: -1; }
+
+  /* Cuadrado pero acotado por la altura de pantalla, para que abajo del
+     modelo entre el titular y se entienda que la pagina sigue. */
+  .hero-stage .vitrine { max-width: min(100%, 44svh); margin-inline: auto; }
+
+  .hero-stage { padding-top: 1.25rem; }
+}
 
 /* ------------------------------------------------------- vitrina del 3D */
 
@@ -1111,25 +1198,165 @@ a { color: inherit; }
 }
 .credit a { color: var(--grey-2); }
 
-/* -------------------------------------------------------------- loader */
+/* ---------------------------------------------------------------- boot */
 
-#loader {
+/* Secuencia de encendido. Cuatro simbolos que se dibujan trazo por trazo,
+   prenden en color, se acomodan en rombo, y recien entonces la marca.
+   Todo con transform/opacity: nada que dispare relayout mientras corre. */
+
+.boot {
   position: fixed;
   inset: 0;
   z-index: 9999;
   display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 1.1rem;
+  place-items: center;
   background: var(--black);
-  transition: opacity var(--t-slow) var(--ease), visibility var(--t-slow);
+  overflow: hidden;
 }
-#loader.hidden { opacity: 0; visibility: hidden; }
 
-.loader-mark { font-family: var(--font-display); font-weight: 200; font-size: 2.2rem; letter-spacing: 0.02em; }
-.loader-track { width: min(280px, 60vw); height: 1px; background: var(--line-2); overflow: hidden; }
-.loader-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.25s var(--ease); }
-.loader-status { font-family: var(--font-mono); font-size: 0.52rem; letter-spacing: 0.18em; color: var(--grey-3); }
+.boot-stage {
+  display: grid;
+  justify-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  transition: opacity 0.5s var(--ease), transform 0.7s var(--ease);
+}
+
+/* --- los cuatro simbolos --- */
+
+.boot-glyphs {
+  display: flex;
+  gap: clamp(1rem, 3.6vw, 2.4rem);
+  align-items: center;
+}
+
+.glyph {
+  width: clamp(36px, 9vw, 72px);
+  aspect-ratio: 1;
+  display: block;
+  opacity: 0;
+  transform: scale(0.72);
+  /* Escalonado por --i: cada simbolo entra 90ms despues del anterior, asi
+     los cuatro terminan antes del medio segundo. */
+  transition: opacity 0.22s var(--ease) calc(var(--i) * 70ms + 100ms),
+              transform 0.44s var(--ease) calc(var(--i) * 70ms + 100ms);
+}
+.glyph svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.glyph svg :is(path, circle, rect) {
+  fill: none;
+  stroke: var(--grey-2);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Trazo completo oculto; se descubre con dashoffset. */
+  stroke-dasharray: var(--len, 200);
+  stroke-dashoffset: var(--len, 200);
+  transition: stroke-dashoffset 0.34s var(--ease) calc(var(--i) * 70ms + 100ms),
+              stroke 0.26s linear calc(var(--i) * 70ms + 340ms);
+}
+
+.boot.draw .glyph { opacity: 1; transform: scale(1); }
+.boot.draw .glyph svg :is(path, circle, rect) { stroke-dashoffset: 0; }
+
+/* Al terminar de dibujarse, cada uno prende en su color y da un pulso. */
+.boot.lit .glyph[data-glyph="tri"]   svg * { stroke: #4FD07A; }
+.boot.lit .glyph[data-glyph="cir"]   svg * { stroke: #F2637A; }
+.boot.lit .glyph[data-glyph="cross"] svg * { stroke: #64A6F0; }
+.boot.lit .glyph[data-glyph="sq"]    svg * { stroke: #D98BD0; }
+.boot.lit .glyph {
+  animation: glyph-pop 0.5s var(--ease) both;
+  animation-delay: calc(var(--i) * 55ms);
+  filter: drop-shadow(0 0 10px currentColor);
+}
+@keyframes glyph-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+/* Al final se juntan y encogen: dejan de ser el protagonista y pasan a ser
+   un remate arriba de la marca. */
+.boot.settle .boot-glyphs {
+  gap: clamp(0.4rem, 1.4vw, 0.85rem);
+  transform: scale(0.62);
+  transition: gap 0.55s var(--ease), transform 0.55s var(--ease);
+}
+
+/* --- marca --- */
+
+.boot-mark {
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: clamp(1.9rem, 6vw, 3.4rem);
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+}
+.boot-mark b { font-weight: 500; color: var(--accent); }
+.boot-mark-in {
+  display: block;
+  transform: translateY(105%);
+  transition: transform 0.72s var(--ease);
+}
+.boot.mark .boot-mark-in { transform: none; }
+
+.boot-sub {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.5s var(--ease) 0.12s, transform 0.5s var(--ease) 0.12s;
+}
+.boot.mark .boot-sub { opacity: 1; transform: none; }
+
+/* --- barra de carga --- */
+
+.boot-meter {
+  width: min(300px, 62vw);
+  display: grid;
+  gap: 0.6rem;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease) 0.2s;
+}
+.boot.mark .boot-meter { opacity: 1; }
+
+.boot-track { height: 1px; background: var(--line-2); overflow: hidden; }
+.boot-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.3s var(--ease);
+}
+.boot-read {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.48rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+}
+.boot-read b { color: var(--grey-1); font-weight: 400; }
+
+/* --- salida --- */
+
+/* La cortina sube y descubre la pagina, en vez de un fundido plano. */
+.boot-curtain {
+  position: absolute;
+  inset: 0;
+  background: var(--black);
+  transform: translateY(100%);
+}
+.boot.out .boot-stage { opacity: 0; transform: translateY(-14px); }
+.boot.out {
+  transition: transform 0.85s var(--ease) 0.18s;
+  transform: translateY(-100%);
+}
+.boot.gone { display: none; }
 
 /* -------------------------------------------------------------- reveal */
 
@@ -1183,4 +1410,12 @@ a { color: inherit; }
     transition-duration: 0.01ms !important;
   }
   .reveal { opacity: 1; transform: none; }
+  /* La coreografia se apaga, pero el contenido tiene que quedar legible:
+     sin esto, .seq se quedaria en opacity 0 esperando una transicion que ya
+     no existe. */
+  body.booted .seq { opacity: 1; transform: none; }
+  body.booted .line > span { transform: none; }
+  .glyph { opacity: 1; transform: none; }
+  .glyph svg :is(path, circle, rect) { stroke-dashoffset: 0; }
+  .boot-mark-in { transform: none; }
 }
