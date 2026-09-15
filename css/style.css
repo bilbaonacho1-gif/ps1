@@ -1,0 +1,1186 @@
+/* ==========================================================================
+   RESET 32-BIT — Sistema visual
+   --------------------------------------------------------------------------
+   Lenguaje tomado de las páginas de producto de hardware gamer, con tres
+   reglas que son las que realmente hacen el estilo:
+
+   1. NEGRO PURO Y UN SOLO ACENTO. El fondo es #000 y el acento aparece en
+      dosis homeopáticas: un botón, un dato, una línea. Medido sobre la página
+      de referencia, su verde aparecía 5 veces entre 1400 elementos. Esa
+      contención es lo que se lee como "caro"; un segundo color de acento
+      arruinaría el efecto, por eso acá hay uno solo.
+
+   2. TÍTULOS GRANDES EN PESO FINO. El contraste no lo da la negrita sino el
+      tamaño y el aire. Un titular enorme y liviano se ve premium; el mismo
+      titular en peso negro se ve gritado.
+
+   3. KICKER + TÍTULO. Cada bloque abre con una etiqueta diminuta en
+      mayúsculas que dice la especificación, y debajo un título en oración que
+      dice el beneficio. La etiqueta informa, el título seduce.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@200;300;400;500;600&family=Inter:wght@300;400;500;600&family=Silkscreen:wght@400;700&display=swap');
+
+/* --------------------------------------------------------------- tokens */
+
+:root {
+  --black: #000000;
+  --surface: #0A0A0A;
+  --surface-2: #121212;
+  --line: #1F1F1F;
+  --line-2: #2C2C2C;
+
+  --white: #FFFFFF;
+  --grey-1: #EEEEEE;
+  --grey-2: #BBBBBB;
+  --grey-3: #757575;
+
+  /* Único acento. Verde fósforo: el mismo color con el que un CRT dibuja. */
+  --accent: #3FE06B;
+  --accent-dim: #1F8F42;
+
+  --font-display: 'Archivo', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Silkscreen', ui-monospace, monospace;
+
+  --container: 1280px;
+  --bar-h: 58px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 0.2s;
+  --t: 0.4s;
+  --t-slow: 0.85s;
+}
+
+/* ----------------------------------------------------------------- base */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--bar-h);
+  background: var(--black);
+}
+
+body {
+  margin: 0;
+  /* 'clip' y no 'hidden': overflow-x:hidden convierte al body en contenedor de
+     scroll propio aunque el scroll real lo maneje <html>, lo que desincroniza
+     scrollTop y rompe el anclaje por #hash. */
+  overflow-x: clip;
+  background: var(--black);
+  color: var(--grey-1);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img { max-width: 100%; display: block; }
+button { font: inherit; color: inherit; }
+a { color: inherit; }
+
+::selection { background: var(--accent); color: #000; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ------------------------------------------------------------ tipografía */
+
+/* Peso 200: la clave del look. El tamaño hace el contraste, no la negrita. */
+.h-xl, .h-lg, .h-md {
+  font-family: var(--font-display);
+  font-weight: 200;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* Tope bajado de 5.6 a 4.2rem: a 5.6 la palabra "RECONSTRUIDA" medía más que
+   su columna y se metía debajo de la consola. Un titular que pisa al producto
+   no es un titular grande, es un titular mal medido. */
+.h-xl { font-size: clamp(2.2rem, 4.8vw, 4.2rem); text-transform: uppercase; }
+.h-lg { font-size: clamp(1.9rem, 3.6vw, 3.1rem); }
+.h-md { font-size: clamp(1.4rem, 2.2vw, 1.9rem); }
+
+/* El kicker dice la especificación; el título, el beneficio. */
+.kicker {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  margin-bottom: 1rem;
+}
+.kicker em { font-style: normal; color: var(--accent); }
+
+.lead {
+  color: var(--grey-2);
+  font-size: 1.02rem;
+  max-width: 58ch;
+  margin: 1.4rem 0 0;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------- layout */
+
+.wrap {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding-inline: 1.75rem;
+}
+
+.section { padding-block: clamp(4.5rem, 9vw, 8rem); }
+.section + .section { border-top: 1px solid var(--line); }
+
+/* -------------------------------------------------- barra fija de producto */
+
+/* Siempre a la vista: qué producto es, cuánto sale y dónde comprarlo.
+   Es el patrón que más levanta la conversión en una página de producto. */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  height: var(--bar-h);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-inline: 1.75rem;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+
+.bar-brand {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.bar-brand span { color: var(--accent); }
+
+.bar-nav {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.bar-nav a {
+  font-size: 0.78rem;
+  color: var(--grey-2);
+  text-decoration: none;
+  padding-block: 0.4rem;
+  border-bottom: 1px solid transparent;
+  transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.bar-nav a:hover { color: var(--white); border-color: var(--accent); }
+
+.bar-right { display: flex; align-items: center; gap: 1rem; margin-left: auto; }
+
+.bar-price {
+  font-size: 0.74rem;
+  color: var(--grey-3);
+  white-space: nowrap;
+}
+.bar-price b { color: var(--white); font-weight: 500; }
+
+@media (max-width: 900px) { .bar-nav, .bar-price { display: none; } }
+
+/* -------------------------------------------------------------- botones */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.72rem 1.4rem;
+  border: 1px solid var(--line-2);
+  border-radius: 2px;   /* casi recto: el redondeo fuerte se ve blando */
+  background: transparent;
+  color: var(--white);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--t-fast) var(--ease),
+              background-color var(--t-fast) var(--ease),
+              color var(--t-fast) var(--ease);
+}
+
+.btn:hover { border-color: var(--white); }
+
+.btn-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 600;
+}
+.btn-accent:hover { background: #5AF083; border-color: #5AF083; color: #000; }
+
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.7rem; }
+.btn-quiet { color: var(--grey-2); border-color: var(--line); }
+.btn-quiet:hover { color: var(--white); border-color: var(--line-2); }
+
+/* ----------------------------------------------------------------- hero */
+
+/* ------------------------------------------------- narrativa por scroll */
+
+/* Sección alta + contenido pegado = tiempo de scroll.
+   Los 320svh no son decorativos: son la duración de la escena. Menos de
+   ~250svh y la tapa se abre de golpe; más de ~400svh y se hace tedioso. */
+.scrolly {
+  height: 320svh;
+  position: relative;
+}
+
+.scrolly-inner {
+  position: sticky;
+  top: var(--bar-h);
+  height: calc(100svh - var(--bar-h));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Los tres capítulos ocupan la MISMA celda de la grilla y se relevan por
+   opacidad. Apilarlos así evita que el bloque salte de alto al cambiar de
+   texto, que es lo que delata una transición mal hecha. */
+.hero-copy { display: grid; }
+.hero-copy > .chapter { grid-area: 1 / 1; }
+
+.chapter {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease);
+  pointer-events: none;
+}
+.chapter.on { opacity: 1; transform: none; pointer-events: auto; }
+
+/* Las acciones y las cifras van debajo del bloque apilado, no dentro. */
+.hero-actions, .hero-facts { grid-area: 2 / 1; }
+.hero-facts { grid-area: 3 / 1; }
+
+/* Indicador de "seguí bajando": una línea que cae en loop. */
+.scroll-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 1.6rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.56rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  pointer-events: none;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 34px;
+  background: linear-gradient(to bottom, var(--accent), transparent);
+  transform-origin: top;
+  animation: scroll-fall 1.9s var(--ease) infinite;
+}
+@keyframes scroll-fall {
+  0% { transform: scaleY(0); opacity: 0; }
+  35% { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1) translateY(34px); opacity: 0; }
+}
+
+/* Barra de lectura: escala en X en vez de cambiar width, porque transform no
+   dispara relayout y el scroll se mantiene fluido. */
+.read-progress {
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.hero {
+  min-height: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 1.75rem;
+  width: 100%;
+}
+
+.hero-title { margin-bottom: 0.4rem; }
+.hero-title em {
+  font-style: normal;
+  /* Blanco, no verde: un titular gigante en el color de acento consume toda
+     la cuota de acento de la pantalla y le roba el protagonismo al botón de
+     compra, que es lo único que de verdad querés que resalte. */
+  color: var(--white);
+}
+
+.hero-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 2.2rem; }
+
+/* Datos duros debajo del hero: tres cifras que respaldan la promesa. */
+.hero-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.4rem;
+  margin-top: 3rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--line);
+}
+
+.fact-n {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--white);
+}
+.fact-l {
+  font-size: 0.66rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  margin-top: 0.4rem;
+}
+
+@media (max-width: 980px) { .hero { grid-template-columns: 1fr; } }
+
+/* ------------------------------------------------------- vitrina del 3D */
+
+/* Único lugar del DOM donde vive el canvas WebGL. Al estar contenido —y no
+   fijo a pantalla completa— deja de interceptar la rueda del mouse sobre toda
+   la página: el scroll vuelve a ser del documento. */
+/* Sin caja: el objeto flota sobre el fondo negro. Un marco alrededor del
+   producto lo convierte en "una imagen de un producto"; sin marco, el producto
+   está ahí. Toda la separación la hace la luz, no una línea. */
+.vitrine {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: visible;
+}
+
+/* Halo detrás del objeto. Es lo único que lo despega del negro. */
+.vitrine::before {
+  content: '';
+  position: absolute;
+  inset: 8% 4% 14%;
+  z-index: -1;
+  background:
+    radial-gradient(48% 42% at 52% 42%, rgba(120, 160, 255, 0.16) 0%, transparent 70%),
+    radial-gradient(60% 34% at 50% 76%, rgba(63, 224, 107, 0.10) 0%, transparent 72%);
+  filter: blur(26px);
+  pointer-events: none;
+}
+
+/* Sombra de apoyo: una elipse difusa debajo, para que no parezca flotando
+   en el vacío. */
+.vitrine::after {
+  content: '';
+  position: absolute;
+  left: 18%; right: 18%;
+  bottom: 13%;
+  height: 26px;
+  z-index: -1;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, 0.9) 0%, transparent 72%);
+  filter: blur(9px);
+  pointer-events: none;
+}
+
+#webgl-canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+#webgl-canvas:active { cursor: grabbing; }
+
+.vitrine-label {
+  position: absolute;
+  left: 14px; bottom: 12px;
+  z-index: 3;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  pointer-events: none;
+}
+
+.vitrine-slot:empty { display: none; }
+#vitrine-catalog:not(:empty) { margin-top: 2.5rem; }
+
+.tooltip-label {
+  position: fixed;
+  z-index: 130;
+  transform: translate(-50%, -190%);
+  padding: 0.28rem 0.5rem;
+  background: var(--black);
+  border: 1px solid var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: var(--white);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease);
+}
+.tooltip-label.visible { opacity: 1; }
+
+/* --------------------------------------------------- filas de feature */
+
+/* Visual a un lado, texto al otro, y se invierte en la siguiente. El ritmo
+   alternado es lo que evita que una página larga se sienta un listado. */
+.feature {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4.5rem);
+}
+
+.feature.flip-order > :first-child { order: 2; }
+
+@media (max-width: 980px) {
+  .feature { grid-template-columns: 1fr; }
+  .feature.flip-order > :first-child { order: 0; }
+}
+
+/* Panel visual genérico de las filas */
+.panel {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 2rem;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* --- pasos del proceso, dentro de un panel --- */
+.steps { display: grid; gap: 0.2rem; }
+
+.step {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.95rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.step:last-child { border-bottom: 0; }
+
+.step-n {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 1.1rem;
+  color: var(--grey-3);
+}
+.step-t { font-size: 0.9rem; color: var(--white); font-weight: 400; }
+.step-d { font-size: 0.82rem; color: var(--grey-3); margin: 0.2rem 0 0; }
+
+/* --- sub-fichas debajo de un feature --- */
+.subfeatures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  margin-top: 2.5rem;
+}
+
+.subfeature { background: var(--black); padding: 1.6rem 1.4rem; }
+
+.subfeature h4 {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--white);
+  margin: 0 0 0.5rem;
+}
+.subfeature p { font-size: 0.84rem; color: var(--grey-3); margin: 0; }
+
+/* -------------------------------------------------------- testimonios */
+
+/* Carrusel sin JavaScript: scroll horizontal con puntos de anclaje. Menos
+   código, funciona con el dedo en táctil y con la rueda en desktop. */
+.testimonials {
+  background:
+    radial-gradient(60% 100% at 50% 0%, rgba(63, 224, 107, 0.05) 0%, transparent 60%),
+    var(--black);
+}
+
+.testi-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.6rem;
+}
+
+.rating { text-align: right; }
+.stars { display: block; color: var(--accent); letter-spacing: 0.18em; font-size: 1rem; }
+.rating-n {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 1.5rem;
+  color: var(--white);
+}
+.rating-n em {
+  font-style: normal;
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+}
+
+.testi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+  gap: 1rem;
+}
+
+/* Reutiliza la mecánica de giro de las fichas del arcade, con otra altura.
+   Va escrito como `.testi .flip-inner` y no como `.testi-inner` a secas
+   porque .flip-inner se declara más abajo en este mismo archivo: con la misma
+   especificidad ganaba la última y el testimonio quedaba con la altura del
+   arcade. Sumar el ancestro resuelve el empate sin tocar el orden. */
+.testi .flip-inner { height: 204px; }
+
+.testi-face {
+  gap: 0.6rem;
+  padding: 1.3rem 1.3rem 1.15rem;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.035) 0%, transparent 42%),
+    var(--surface);
+}
+
+/* Comilla gigante de fondo: da jerarquía sin agregar un solo color. */
+.q-mark {
+  position: absolute;
+  top: -0.35rem;
+  right: 0.7rem;
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 4.5rem;
+  line-height: 1;
+  color: var(--line-2);
+  pointer-events: none;
+  user-select: none;
+}
+
+.q-text {
+  position: relative;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--grey-1);
+}
+
+.q-who {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+}
+
+/* Iniciales en un círculo: reemplaza una foto que no tenemos, sin recurrir a
+   un retrato de banco de imágenes que se nota a la legua. */
+.q-av {
+  display: grid;
+  place-items: center;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0;
+  color: var(--grey-2);
+  flex-shrink: 0;
+}
+
+.verified {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* La lucecita: un punto que late. Es lo único vivo de la tarjeta en reposo. */
+.verified .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: led-breathe 2.6s var(--ease) infinite;
+}
+
+/* ------------------------------------------------------------- arcade */
+
+.arcade-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+@media (max-width: 1040px) { .arcade-layout { grid-template-columns: 1fr; } }
+
+.crt-bezel {
+  position: relative;
+  padding: 15px 15px 22px;
+  border-radius: 12px 12px 6px 6px;
+  background: linear-gradient(170deg, #2A2A2E 0%, #191919 55%, #0E0E0E 100%);
+  border: 1px solid var(--line-2);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 48px rgba(0,0,0,0.7);
+}
+
+.crt-bezel::after {
+  content: 'RESET · CARTUCHO DE PRUEBA';
+  position: absolute;
+  left: 50%; bottom: 5px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+  color: var(--grey-3);
+}
+
+.arcade-screen {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  /* El canvas tiene 320x180 px internos; 'pixelated' evita que el navegador
+     interpole al escalarlo y borronee el pixel art. */
+  image-rendering: pixelated;
+  border-radius: 3px;
+  background: #000;
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.95);
+  touch-action: none;
+  cursor: crosshair;
+  outline: none;
+}
+
+/* Dos capas: el barrido horizontal y la trama RGB del fósforo. */
+.crt-overlay {
+  position: absolute;
+  inset: 15px 15px 22px;
+  border-radius: 3px;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.26) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255,0,0,0.05) 0 1px, rgba(0,255,0,0.05) 1px 2px, rgba(0,0,255,0.05) 2px 3px);
+  mix-blend-mode: multiply;
+}
+.crt-glare {
+  position: absolute;
+  inset: 15px 15px 22px;
+  border-radius: 3px;
+  pointer-events: none;
+  background: linear-gradient(125deg, rgba(255,255,255,0.09) 0%, transparent 48%);
+}
+
+/* LED de encendido del televisor. Detalle chico, pero es lo que hace que el
+   mueble se lea como un aparato prendido y no como un dibujo. */
+.crt-led {
+  position: absolute;
+  right: 22px;
+  bottom: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 7px var(--accent);
+  animation: led-breathe 3.2s var(--ease) infinite;
+}
+@keyframes led-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* Resplandor del tubo sobre la sección: la pantalla ilumina lo que la rodea. */
+.arcade-machine { position: relative; }
+.arcade-machine::before {
+  content: '';
+  position: absolute;
+  inset: -12% -8% 30%;
+  z-index: -1;
+  background: radial-gradient(60% 55% at 50% 40%, rgba(63, 224, 107, 0.13) 0%, transparent 70%);
+  filter: blur(22px);
+  pointer-events: none;
+}
+
+/* --- selector directo de juego --- */
+
+.game-chips {
+  display: flex;
+  gap: 1px;
+  margin-top: 1rem;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.game-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  background: var(--black);
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.game-chip:hover { background: var(--surface); }
+
+.game-chip[aria-current='true'] { background: var(--surface); box-shadow: inset 2px 0 0 var(--accent); }
+
+.game-chip b {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--white);
+  letter-spacing: 0.01em;
+}
+.game-chip span {
+  font-size: 0.56rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+}
+
+@media (max-width: 560px) { .game-chips { flex-direction: column; } }
+
+/* --- marcador resumen --- */
+
+.score-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  margin-bottom: 1.6rem;
+}
+
+.score-cell { background: var(--black); padding: 0.9rem 0.8rem; }
+.score-cell b {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--white);
+}
+.score-cell span {
+  display: block;
+  font-size: 0.54rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  margin-top: 0.35rem;
+}
+
+.arcade-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.arcade-hint {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+}
+
+/* --- fichas giratorias --- */
+
+.cards-title {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  margin: 0 0 1rem;
+}
+
+.card-deck { display: grid; gap: 0.8rem; }
+
+/* Contenedor con perspectiva y plano interno que rota en Y. La cara de atrás
+   se oculta con backface-visibility; sin eso verías el frente espejado. */
+.flip {
+  perspective: 1100px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+/* Altura fija y suficiente para las DOS caras.
+   Antes ambas caras eran absolutas, así que ninguna le daba altura al
+   contenedor: la ficha medía 124px mientras el dorso necesitaba 170 y el botón
+   se salía por abajo. Con una altura explícita que contiene a la más alta, el
+   problema desaparece. */
+.flip-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 172px;
+  transform-style: preserve-3d;
+  transition: transform var(--t-slow) var(--ease);
+}
+.flip[aria-pressed='true'] .flip-inner { transform: rotateY(180deg); }
+
+.flip-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color var(--t-fast) var(--ease);
+}
+.flip:hover .flip-face { border-color: var(--line-2); }
+
+/* Pista de que la ficha gira: una esquina doblada que se ilumina al pasar. */
+.flip-front::after {
+  content: '';
+  position: absolute;
+  right: 0; bottom: 0;
+  border: 9px solid transparent;
+  border-right-color: var(--line-2);
+  border-bottom-color: var(--line-2);
+  transition: border-color var(--t-fast) var(--ease);
+}
+.flip:hover .flip-front::after { border-right-color: var(--accent); border-bottom-color: var(--accent); }
+
+.flip-back {
+  transform: rotateY(180deg);
+  background:
+    radial-gradient(110% 90% at 100% 0%, rgba(63, 224, 107, 0.10) 0%, transparent 60%),
+    var(--surface);
+}
+
+.flip-name {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.98rem;
+  color: var(--white);
+}
+.flip-tag {
+  display: block;
+  font-size: 0.6rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  margin-top: 0.3rem;
+}
+
+.flip-cover {
+  width: 100%;
+  height: 42px;
+  object-fit: cover;
+  image-rendering: pixelated;
+  margin-bottom: 0.6rem;
+  border: 1px solid var(--line);
+}
+
+.flip-rank {
+  position: absolute;
+  top: 0.7rem; right: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--grey-3);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.26rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.stat-row:last-of-type { border-bottom: 0; }
+.stat-k {
+  font-size: 0.58rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+}
+.stat-v { font-family: var(--font-mono); font-size: 0.72rem; color: var(--white); }
+
+.flip-play { margin-top: 0.6rem; width: 100%; }
+
+/* ----------------------------------------------------------- catálogo */
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.catalog-card {
+  background: var(--black);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.6rem;
+  padding: 2rem 1.7rem;
+  transition: background-color var(--t) var(--ease);
+}
+.catalog-card:hover { background: var(--surface); }
+
+.catalog-card.featured { background: var(--surface); position: relative; }
+.catalog-card.featured::before {
+  content: 'MÁS ELEGIDA';
+  position: absolute;
+  top: 0; left: 0;
+  background: var(--accent);
+  color: #000;
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  padding: 0.3rem 0.6rem;
+}
+
+.catalog-badge {
+  display: block;
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+  margin-bottom: 0.9rem;
+}
+
+.catalog-model {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 1.35rem;
+  margin: 0 0 0.4rem;
+}
+
+.catalog-price {
+  font-family: var(--font-display);
+  font-weight: 200;
+  font-size: 2.5rem;
+  line-height: 1;
+  color: var(--white);
+  margin-bottom: 1.4rem;
+}
+.catalog-price small { font-size: 0.8rem; color: var(--grey-3); }
+
+.catalog-features { list-style: none; margin: 0 0 0.4rem; padding: 0; display: grid; gap: 0.5rem; }
+.catalog-features li {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: 0.84rem;
+  color: var(--grey-2);
+}
+.catalog-features li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0.6em;
+  width: 6px; height: 1px;
+  background: var(--grey-3);
+}
+
+.catalog-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* --------------------------------------------------------- tech specs */
+
+.spec-table { border-top: 1px solid var(--line); }
+
+.spec-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 1.05rem 0;
+  border-bottom: 1px solid var(--line);
+  transition: padding-left var(--t) var(--ease);
+}
+.spec-row:hover { padding-left: 0.6rem; }
+
+.spec-label {
+  flex: 0 0 34%;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--grey-3);
+}
+.spec-value { font-size: 0.88rem; color: var(--grey-1); }
+
+@media (max-width: 720px) {
+  .spec-row { flex-direction: column; gap: 0.25rem; }
+  .spec-label { flex: none; }
+}
+
+/* ---------------------------------------------------------- garantía */
+
+.guarantee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.guarantee-card { background: var(--black); padding: 1.7rem 1.5rem; }
+.guarantee-tag {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.15em;
+  color: var(--grey-3);
+  margin-bottom: 0.8rem;
+}
+.guarantee-title {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 0.6rem;
+  color: var(--white);
+}
+.guarantee-desc { font-size: 0.84rem; color: var(--grey-3); margin: 0; }
+
+/* -------------------------------------------------------------- cierre */
+
+.cta {
+  text-align: center;
+  padding: clamp(5rem, 10vw, 9rem) 1.75rem;
+  border-top: 1px solid var(--line);
+  background: radial-gradient(70% 100% at 50% 100%, rgba(63, 224, 107, 0.09) 0%, transparent 62%), var(--black);
+}
+.cta .h-xl { margin: 0 auto 2.2rem; max-width: 16ch; }
+
+.footer { border-top: 1px solid var(--line); padding: 3rem 1.75rem 2.2rem; }
+.footer-inner {
+  max-width: var(--container);
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.5rem;
+  justify-content: space-between;
+}
+.footer p { color: var(--grey-3); font-size: 0.8rem; margin: 0.6rem 0 0; max-width: 42ch; }
+
+.credit {
+  max-width: var(--container);
+  margin: 2.5rem auto 0;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.66rem;
+  color: var(--grey-3);
+  line-height: 1.8;
+}
+.credit a { color: var(--grey-2); }
+
+/* -------------------------------------------------------------- loader */
+
+#loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1.1rem;
+  background: var(--black);
+  transition: opacity var(--t-slow) var(--ease), visibility var(--t-slow);
+}
+#loader.hidden { opacity: 0; visibility: hidden; }
+
+.loader-mark { font-family: var(--font-display); font-weight: 200; font-size: 2.2rem; letter-spacing: 0.02em; }
+.loader-track { width: min(280px, 60vw); height: 1px; background: var(--line-2); overflow: hidden; }
+.loader-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.25s var(--ease); }
+.loader-status { font-family: var(--font-mono); font-size: 0.52rem; letter-spacing: 0.18em; color: var(--grey-3); }
+
+/* -------------------------------------------------------------- reveal */
+
+/* Entrada por scroll. Si el JS falla, la clase nunca se agrega y el contenido
+   queda invisible: por eso main.js además lo fuerza a los 2 segundos. */
+.reveal { opacity: 0; transform: translateY(20px); }
+.reveal.in {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-slow) var(--ease), transform var(--t-slow) var(--ease);
+}
+
+/* --------------------------------------------------------------- modal */
+
+#crt-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--t) var(--ease), visibility var(--t);
+}
+#crt-modal.visible { opacity: 1; visibility: visible; }
+
+.crt-shell { width: min(900px, 100%); display: flex; flex-direction: column; gap: 1rem; }
+
+.crt-terminal {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  line-height: 1.9;
+  color: var(--accent);
+  margin: 0;
+  white-space: pre-wrap;
+  min-height: 8rem;
+  text-shadow: 0 0 9px rgba(63, 224, 107, 0.45);
+}
+.crt-mount:empty { display: none; }
+.crt-bar { display: flex; justify-content: flex-end; }
+
+/* ---------------------------------------------------------- movimiento */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+}

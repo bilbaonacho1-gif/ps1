@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PS1 — prueba de modelo</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0d10;overflow:hidden}
+  canvas{display:block}
+  #hud{position:fixed;left:16px;top:16px;font:12px ui-monospace,monospace;color:#8ab4ff;
+       background:#0f1318cc;border:1px solid #223;border-radius:8px;padding:10px 12px;line-height:1.7}
+  #hud b{color:#fff}
+  button{font:inherit;background:#1a2230;color:#cfe1ff;border:1px solid #2c3a4f;
+         border-radius:6px;padding:5px 10px;cursor:pointer;margin-right:6px}
+  button:hover{background:#243044}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div><b>Lisa Gordon, PS1 Final</b> — happylittlepolygons (CC-BY)</div>
+  <div id="stats">cargando…</div>
+  <div style="margin-top:8px">
+    <button id="play">Abrir tapa</button>
+    <button id="rev">Cerrar</button>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://unpkg.com/three@0.169.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.169.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0d10);
+
+// Entorno: sin esto el PBR (metallic/roughness) no tiene nada que reflejar.
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.01, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+
+// Luces
+const key = new THREE.DirectionalLight(0xffffff, 2.4);
+key.position.set(3, 5, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.bias = -0.0005;
+scene.add(key, new THREE.AmbientLight(0xffffff, 0.35));
+const rim = new THREE.DirectionalLight(0x5b8cff, 1.6); rim.position.set(-4, 2, -3); scene.add(rim);
+
+// Piso que solo recibe sombra
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.45 }));
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+let mixer, action;
+const clock = new THREE.Clock();
+
+new GLTFLoader().load('assets/models/ps1.glb', (gltf) => {
+  const root = gltf.scene;
+  root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+  // Centrar y escalar a una altura conocida, apoyado en el piso.
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const s = 1.6 / Math.max(size.x, size.z);
+  root.scale.setScalar(s);
+
+  const box2 = new THREE.Box3().setFromObject(root);
+  const c = box2.getCenter(new THREE.Vector3());
+  root.position.sub(new THREE.Vector3(c.x, box2.min.y, c.z));
+  scene.add(root);
+
+  const b3 = new THREE.Box3().setFromObject(root);
+  const sz = b3.getSize(new THREE.Vector3());
+  controls.target.set(0, sz.y * 0.45, 0);
+  camera.position.set(1.5, 1.15, 1.9);
+  controls.update();
+
+  if (gltf.animations.length) {
+    mixer = new THREE.AnimationMixer(root);
+    action = mixer.clipAction(gltf.animations[0]);
+    action.clampWhenFinished = true;
+    action.loop = THREE.LoopOnce;
+  }
+
+  let tris = 0;
+  root.traverse((o) => { if (o.isMesh) tris += o.geometry.index ? o.geometry.index.count / 3 : 0; });
+  document.getElementById('stats').innerHTML =
+    `${Math.round(tris).toLocaleString()} tris · clip: <b>${gltf.animations[0]?.name ?? 'ninguno'}</b> · ${gltf.animations[0]?.duration.toFixed(1) ?? 0}s`;
+}, undefined, (e) => {
+  document.getElementById('stats').textContent = 'ERROR: ' + e.message;
+});
+
+document.getElementById('play').onclick = () => {
+  if (!action) return;
+  action.reset(); action.timeScale = 1; action.play();
+};
+document.getElementById('rev').onclick = () => {
+  if (!action) return;
+  action.paused = false; action.timeScale = -1;
+  action.time = action.getClip().duration; action.play();
+};
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+renderer.setAnimationLoop(() => {
+  const d = clock.getDelta();
+  mixer?.update(d);
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+// Ayuda para las capturas: window.seek(t) salta a un momento del clip.
+window.seek = (t) => { if (!action) return; action.paused = true; action.play(); action.time = t; mixer.update(0); };
+</script>
+</body>
+</html>

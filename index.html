@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RESET R-02 — Consola de 32 bits restaurada</title>
+<meta name="description" content="Consolas de 32 bits restauradas a mano: recapadas, recalibradas y testeadas 48 horas. Miralas en 3D y probá el cartucho antes de comprar.">
+<link rel="stylesheet" href="css/style.css">
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="loader" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+  <span class="loader-mark">RESET</span>
+  <div class="loader-track"><div id="loader-fill" class="loader-fill"></div></div>
+  <span id="loader-status" class="loader-status">Cargando modelo 0%</span>
+</div>
+
+<!-- Barra fija: qué producto, cuánto sale, dónde comprarlo. Siempre visible. -->
+<header class="bar">
+  <div class="bar-brand">RESET <span>R-02</span></div>
+  <nav>
+    <ul class="bar-nav">
+      <li><a href="#proceso">Restauración</a></li>
+      <li><a href="#arcade">Arcade</a></li>
+      <li><a href="#catalogo">Modelos</a></li>
+      <li><a href="#specs">Ficha técnica</a></li>
+    </ul>
+  </nav>
+  <div class="bar-right">
+    <span class="bar-price">Desde <b>$189</b></span>
+    <span id="read-progress" class="read-progress" aria-hidden="true"></span>
+    <button id="btn-power" class="btn btn-sm btn-quiet">Encender</button>
+    <a href="#catalogo" class="btn btn-sm btn-accent">Comprar</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============================== HERO ==============================
+       Sección de tres pantallas de alto con el contenido pegado adentro:
+       el scroll no mueve la escena, la ANIMA. Ver js/scrolly.js.          -->
+  <section class="scrolly" id="hero">
+    <div class="scrolly-inner">
+      <div class="hero">
+        <div class="hero-copy">
+          <!-- Tres capítulos que se relevan según el avance del scroll -->
+          <div class="chapter on" data-chapter="0">
+            <span class="kicker">Consola de 32 bits · <em>restaurada a mano</em></span>
+            <h1 class="h-xl hero-title">No es usada.<br>Está reconstruida.</h1>
+            <p class="lead">
+              Cada unidad se desarma pieza por pieza, se limpia por ultrasonido
+              y se recapa con condensadores japoneses nuevos.
+            </p>
+          </div>
+
+          <div class="chapter" data-chapter="1">
+            <span class="kicker">Paso 03 · <em>recalibración óptica</em></span>
+            <h2 class="h-xl hero-title">Se abre.<br>Y adentro está sana.</h2>
+            <p class="lead">
+              La ganancia del diodo láser se ajusta con osciloscopio, no a ojo.
+              Por eso lee discos que otras consolas rechazan.
+            </p>
+          </div>
+
+          <div class="chapter" data-chapter="2">
+            <span class="kicker">Paso 04 · <em>48 horas de prueba</em></span>
+            <h2 class="h-xl hero-title">Y recién ahí<br>sale del taller.</h2>
+            <p class="lead">
+              Dos días completos corriendo benchmarks en cámara térmica, hasta
+              garantizar que no haya un solo salto de lectura.
+            </p>
+          </div>
+
+          <div class="hero-actions">
+            <a href="#catalogo" class="btn btn-accent">Ver modelos</a>
+            <button id="btn-eject" class="btn">Abrir la tapa</button>
+            <button id="btn-rotate" class="btn btn-quiet">Rotar 360°</button>
+          </div>
+
+          <div class="hero-facts">
+            <div>
+              <div class="fact-n"><span data-count="48" data-suffix=" h">48 h</span></div>
+              <div class="fact-l">Test de estrés</div>
+            </div>
+            <div>
+              <div class="fact-n"><span data-count="100" data-suffix=" %">100 %</span></div>
+              <div class="fact-l">Condensadores nuevos</div>
+            </div>
+            <div>
+              <div class="fact-n"><span data-count="12">12</span></div>
+              <div class="fact-l">Meses de garantía</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- La vitrina: único lugar del DOM con el canvas WebGL.
+             Se muda al catálogo cuando pedís "Ver en 3D". -->
+        <div class="vitrine-slot" id="vitrine-home">
+          <div class="vitrine" id="vitrine">
+            <canvas id="webgl-canvas" aria-label="Modelo 3D interactivo de la consola. Arrastrá para rotarla."></canvas>
+            <span class="vitrine-label">Arrastrá para rotar · el scroll abre la tapa</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-hint" aria-hidden="true">
+        <span>Desplazá</span>
+        <span class="scroll-line"></span>
+      </div>
+    </div>
+  </section>
+
+  <div id="tooltips" aria-hidden="true">
+    <div id="tooltip-eject" class="tooltip-label">Eject · abrir tapa</div>
+    <div id="tooltip-power" class="tooltip-label">Power · encender</div>
+    <div id="tooltip-reset" class="tooltip-label">Reset · reiniciar</div>
+  </div>
+
+  <!-- ========================= TESTIMONIOS ============================ -->
+  <section class="section testimonials" id="opiniones">
+    <div class="wrap">
+      <div class="testi-head reveal">
+        <div>
+          <span class="kicker">Compras verificadas</span>
+          <h2 class="h-lg">142 consolas entregadas.</h2>
+        </div>
+        <div class="rating">
+          <span class="stars" aria-hidden="true">★★★★★</span>
+          <span class="rating-n">4,9 <em>sobre 5</em></span>
+        </div>
+      </div>
+
+      <!-- Cada testimonio gira y muestra el detalle de la compra -->
+      <div class="testi-grid reveal">
+        <button type="button" class="testi flip" aria-pressed="false" aria-label="Testimonio de Martín D. Tocá para ver el detalle de la compra.">
+          <span class="flip-inner testi-inner">
+            <span class="flip-face testi-face">
+              <span class="q-mark" aria-hidden="true">”</span>
+              <span class="q-text">Llegó mejor que la que tuve de chico. El lector no falla ni con discos rayados.</span>
+              <span class="q-who"><span class="q-av">MD</span> Martín D. · Rosario</span>
+            </span>
+            <span class="flip-face flip-back testi-face">
+              <span class="verified"><span class="dot"></span> Compra verificada</span>
+              <span>
+                <span class="stat-row"><span class="stat-k">Modelo</span><span class="stat-v">R-02</span></span>
+                <span class="stat-row"><span class="stat-k">Entregada</span><span class="stat-v">mar 2026</span></span>
+                <span class="stat-row"><span class="stat-k">Puntaje</span><span class="stat-v">5/5</span></span>
+              </span>
+            </span>
+          </span>
+        </button>
+
+        <button type="button" class="testi flip" aria-pressed="false" aria-label="Testimonio de Carolina V. Tocá para ver el detalle de la compra.">
+          <span class="flip-inner testi-inner">
+            <span class="flip-face testi-face">
+              <span class="q-mark" aria-hidden="true">”</span>
+              <span class="q-text">Me mandaron la ficha de calibración impresa. Nunca vi ese nivel de detalle.</span>
+              <span class="q-who"><span class="q-av">CV</span> Carolina V. · CABA</span>
+            </span>
+            <span class="flip-face flip-back testi-face">
+              <span class="verified"><span class="dot"></span> Compra verificada</span>
+              <span>
+                <span class="stat-row"><span class="stat-k">Modelo</span><span class="stat-v">R-99</span></span>
+                <span class="stat-row"><span class="stat-k">Entregada</span><span class="stat-v">ene 2026</span></span>
+                <span class="stat-row"><span class="stat-k">Puntaje</span><span class="stat-v">5/5</span></span>
+              </span>
+            </span>
+          </span>
+        </button>
+
+        <button type="button" class="testi flip" aria-pressed="false" aria-label="Testimonio de Nicolás P. Tocá para ver el detalle de la compra.">
+          <span class="flip-inner testi-inner">
+            <span class="flip-face testi-face">
+              <span class="q-mark" aria-hidden="true">”</span>
+              <span class="q-text">Pensé que era un chiste lo de las 48 horas de prueba. No lo era.</span>
+              <span class="q-who"><span class="q-av">NP</span> Nicolás P. · Córdoba</span>
+            </span>
+            <span class="flip-face flip-back testi-face">
+              <span class="verified"><span class="dot"></span> Compra verificada</span>
+              <span>
+                <span class="stat-row"><span class="stat-k">Modelo</span><span class="stat-v">R-01</span></span>
+                <span class="stat-row"><span class="stat-k">Entregada</span><span class="stat-v">feb 2026</span></span>
+                <span class="stat-row"><span class="stat-k">Puntaje</span><span class="stat-v">5/5</span></span>
+              </span>
+            </span>
+          </span>
+        </button>
+
+        <button type="button" class="testi flip" aria-pressed="false" aria-label="Testimonio de Julián R. Tocá para ver el detalle de la compra.">
+          <span class="flip-inner testi-inner">
+            <span class="flip-face testi-face">
+              <span class="q-mark" aria-hidden="true">”</span>
+              <span class="q-text">La abrí y por dentro parece nueva. Los capacitores son todos nuevos.</span>
+              <span class="q-who"><span class="q-av">JR</span> Julián R. · La Plata</span>
+            </span>
+            <span class="flip-face flip-back testi-face">
+              <span class="verified"><span class="dot"></span> Compra verificada</span>
+              <span>
+                <span class="stat-row"><span class="stat-k">Modelo</span><span class="stat-v">R-02</span></span>
+                <span class="stat-row"><span class="stat-k">Entregada</span><span class="stat-v">dic 2025</span></span>
+                <span class="stat-row"><span class="stat-k">Puntaje</span><span class="stat-v">4/5</span></span>
+              </span>
+            </span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== 01 PROCESO (feature) ====================== -->
+  <section class="section" id="proceso">
+    <div class="wrap">
+      <div class="feature reveal">
+        <div>
+          <span class="kicker">Recapacitación completa</span>
+          <h2 class="h-lg">Lo que no se ve<br>es lo que se escucha.</h2>
+          <p class="lead">
+            Los condensadores electrolíticos de los noventa se secan. Es la causa
+            número uno de que una consola de esa época suene mal, se recaliente o
+            directamente no encienda. Los cambiamos todos, siempre, incluso en
+            las unidades que llegan funcionando perfecto.
+          </p>
+        </div>
+
+        <div class="panel">
+          <div class="steps">
+            <div class="step">
+              <span class="step-n">01</span>
+              <div>
+                <div class="step-t">Desarmado y ultra-limpieza</div>
+                <p class="step-d">Baño de ultrasonido con agentes neutros que sacan treinta años de polvo sin atacar el tono del plástico.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="step-n">02</span>
+              <div>
+                <div class="step-t">Recapacitación completa</div>
+                <p class="step-d">Cien por ciento de los electrolíticos de placa y fuente, por unidades de estado sólido Nichicon y Panasonic.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="step-n">03</span>
+              <div>
+                <div class="step-t">Recalibración óptica</div>
+                <p class="step-d">Ganancia del diodo láser ajustada con osciloscopio y guía del motor lubricada con grasa de teflón.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="step-n">04</span>
+              <div>
+                <div class="step-t">Test de estrés de 48 horas</div>
+                <p class="step-d">Cámara térmica corriendo benchmarks de geometría y audio, hasta garantizar cero saltos de lectura.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subfeatures reveal">
+        <div class="subfeature">
+          <h4>Condensadores japoneses</h4>
+          <p>Nichicon y Panasonic de estado sólido, con el doble de vida útil que el original.</p>
+        </div>
+        <div class="subfeature">
+          <h4>Láser recalibrado</h4>
+          <p>Ganancia medida con osciloscopio, no a ojo. Lee discos que otras consolas rechazan.</p>
+        </div>
+        <div class="subfeature">
+          <h4>Ficha de banco impresa</h4>
+          <p>Cada consola viaja con los valores de voltaje que se midieron en su propio test.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== 02 ARCADE (feature) ======================= -->
+  <section class="section" id="arcade">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:3rem">
+        <span class="kicker">Cartucho de prueba incluido</span>
+        <h2 class="h-lg">Probala antes de comprarla.</h2>
+        <p class="lead">
+          Con cada consola va el mismo cartucho que usamos en el taller para
+          testear video, audio y controles. Corre acá abajo, en el navegador,
+          sin instalar nada.
+        </p>
+      </div>
+
+      <div class="arcade-layout reveal">
+        <div class="arcade-machine" id="arcade-machine">
+          <div class="crt-bezel">
+            <span class="crt-led" aria-hidden="true"></span>
+            <canvas id="arcade-screen" class="arcade-screen" width="320" height="180"
+                    tabindex="0"
+                    aria-label="Arcade de tres minijuegos. Flechas para elegir, espacio para jugar."></canvas>
+            <div class="crt-overlay" aria-hidden="true"></div>
+            <div class="crt-glare" aria-hidden="true"></div>
+          </div>
+
+          <!-- Selector directo: no obliga a descubrir que las flechas mueven -->
+          <div class="game-chips" id="game-chips" role="group" aria-label="Elegir juego"></div>
+
+          <div class="arcade-controls">
+            <span class="arcade-hint">Flechas elegir · espacio jugar · esc menú</span>
+            <button id="arcade-sound" class="btn btn-sm btn-quiet" aria-pressed="true">Sonido: on</button>
+          </div>
+        </div>
+
+        <aside>
+          <div class="score-strip" id="score-strip"></div>
+          <p class="cards-title">Tus marcas · tocá una ficha para darla vuelta</p>
+          <div class="card-deck" id="card-deck"></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== 03 CATÁLOGO ========================== -->
+  <section class="section" id="catalogo">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:3rem">
+        <span class="kicker">Disponibilidad inmediata</span>
+        <h2 class="h-lg">Tres niveles de restauración.</h2>
+        <p class="lead">
+          Cualquiera de los tres podés mirarlo en 3D acá mismo: la vitrina se
+          muda a esta sección.
+        </p>
+      </div>
+
+      <div class="catalog-grid reveal">
+        <article class="catalog-card">
+          <div>
+            <span class="catalog-badge">Edición estándar</span>
+            <h3 class="catalog-model">Model R-01</h3>
+            <div class="catalog-price">$189 <small>USD</small></div>
+            <ul class="catalog-features">
+              <li>Chasis original pulido e higienizado</li>
+              <li>Placa base recapada al 100%</li>
+              <li>Un control analógico restaurado</li>
+              <li>Memory card de 1 MB recertificada</li>
+            </ul>
+          </div>
+          <div class="catalog-actions">
+            <button class="btn btn-accent btn-buy" data-model="R-01">Reservar</button>
+            <button class="btn btn-quiet btn-3d" data-model="R-01">Ver en 3D</button>
+          </div>
+        </article>
+
+        <article class="catalog-card featured">
+          <div>
+            <span class="catalog-badge">Bundle audiófilo</span>
+            <h3 class="catalog-model">Model R-02</h3>
+            <div class="catalog-price">$249 <small>USD</small></div>
+            <ul class="catalog-features">
+              <li>Lector óptico nuevo de paquete</li>
+              <li>Salida directa del DAC de audio</li>
+              <li>Dos controles originales emparejados</li>
+              <li>Dos memory cards con su caja</li>
+            </ul>
+          </div>
+          <div class="catalog-actions">
+            <button class="btn btn-accent btn-buy" data-model="R-02">Reservar</button>
+            <button class="btn btn-quiet btn-3d" data-model="R-02">Ver en 3D</button>
+          </div>
+        </article>
+
+        <article class="catalog-card">
+          <div>
+            <span class="catalog-badge">Colección · sellada</span>
+            <h3 class="catalog-model">Model R-99</h3>
+            <div class="catalog-price">$399 <small>USD</small></div>
+            <ul class="catalog-features">
+              <li>Unidad nunca usada, stock original</li>
+              <li>Caja con número de serie coincidente</li>
+              <li>Manuales y folletería intactos</li>
+              <li>Certificado de autenticidad</li>
+            </ul>
+          </div>
+          <div class="catalog-actions">
+            <button class="btn btn-accent btn-buy" data-model="R-99">Reservar</button>
+            <button class="btn btn-quiet btn-3d" data-model="R-99">Ver en 3D</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="vitrine-slot" id="vitrine-catalog"></div>
+    </div>
+  </section>
+
+  <!-- ========================= 04 FICHA TÉCNICA ======================= -->
+  <section class="section" id="specs">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:2.5rem">
+        <span class="kicker">Arquitectura y hardware</span>
+        <h2 class="h-lg">Ficha técnica.</h2>
+      </div>
+
+      <div class="spec-table reveal">
+        <div class="spec-row"><span class="spec-label">Procesador principal</span><span class="spec-value">RISC 32-bit R3000A @ 33.8688 MHz</span></div>
+        <div class="spec-row"><span class="spec-label">Memoria del sistema</span><span class="spec-value">2 MB EDO · 1 MB VRAM</span></div>
+        <div class="spec-row"><span class="spec-label">Procesador gráfico</span><span class="spec-value">GPU 32-bit · 360.000 polígonos por segundo</span></div>
+        <div class="spec-row"><span class="spec-label">Unidad de sonido</span><span class="spec-value">24 canales ADPCM a 44.1 kHz</span></div>
+        <div class="spec-row"><span class="spec-label">Lectora óptica</span><span class="spec-value">CD-ROM 2X constante · 300 KB/s</span></div>
+        <div class="spec-row"><span class="spec-label">Alimentación</span><span class="spec-value">Fuente interna recapada 100–240 V</span></div>
+        <div class="spec-row"><span class="spec-label">Salidas de video</span><span class="spec-value">RGB SCART · S-Video · AV compuesto (240p / 480i)</span></div>
+        <div class="spec-row"><span class="spec-label">Garantía</span><span class="spec-value">12 meses sobre piezas y mano de obra</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== 05 GARANTÍA ========================== -->
+  <section class="section" id="garantia">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:2.5rem">
+        <span class="kicker">Tranquilidad total</span>
+        <h2 class="h-lg">Lo que pasa después de la compra.</h2>
+      </div>
+
+      <div class="guarantee-grid reveal">
+        <div class="guarantee-card">
+          <span class="guarantee-tag">[ 12 meses ]</span>
+          <h3 class="guarantee-title">Garantía integral</h3>
+          <p class="guarantee-desc">Piezas, servicio mecánico del lector y mano de obra por un año completo, sin preguntas.</p>
+        </div>
+        <div class="guarantee-card">
+          <span class="guarantee-tag">[ Certificado ]</span>
+          <h3 class="guarantee-title">Reporte de banco</h3>
+          <p class="guarantee-desc">Ficha de calibración impresa con los valores de voltaje medidos en tu propia unidad.</p>
+        </div>
+        <div class="guarantee-card">
+          <span class="guarantee-tag">[ Envío ]</span>
+          <h3 class="guarantee-title">Embalaje anti-impacto</h3>
+          <p class="guarantee-desc">Espuma de poliuretano ESD de alta densidad, a prueba de caídas y vibración.</p>
+        </div>
+        <div class="guarantee-card">
+          <span class="guarantee-tag">[ De por vida ]</span>
+          <h3 class="guarantee-title">Soporte y repuestos</h3>
+          <p class="guarantee-desc">Acceso prioritario al stock y asesoría directa de quien restauró tu consola.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== CTA ============================== -->
+  <section class="cta">
+    <span class="kicker" style="text-align:center">Quedan pocas unidades por tanda</span>
+    <h2 class="h-xl">Reviví los 32 bits.</h2>
+    <button id="btn-cta" class="btn btn-accent">Elegir mi consola</button>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <div class="bar-brand">RESET <span>32-BIT</span></div>
+      <p>Taller independiente de restauración de hardware de consumo de los noventa. Proyecto académico sin fines comerciales.</p>
+    </div>
+    <div>
+      <p class="mono" style="color:var(--grey-3)">Diseño y Programación Web II</p>
+    </div>
+  </div>
+
+  <!-- Atribución obligatoria de la licencia CC del modelo 3D -->
+  <div class="credit">
+    Modelo 3D: <a href="https://skfb.ly/oAxnL" target="_blank" rel="noopener">“Lisa Gordon, PS1 Final”</a>
+    de happylittlepolygons, bajo
+    <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">Creative Commons Attribution 4.0</a>.
+  </div>
+</footer>
+
+<div id="crt-modal" role="dialog" aria-modal="true" aria-label="Consola encendida">
+  <div class="crt-shell">
+    <pre id="crt-terminal" class="crt-terminal"></pre>
+    <div id="crt-mount" class="crt-mount"></div>
+    <div class="crt-bar">
+      <button id="crt-close" class="btn btn-quiet">Esc · apagar consola</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
