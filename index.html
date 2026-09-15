@@ -366,14 +366,33 @@
 
       <div class="arcade-layout reveal">
         <div class="arcade-machine" id="arcade-machine">
-          <div class="crt-bezel">
-            <span class="crt-led" aria-hidden="true"></span>
-            <canvas id="arcade-screen" class="arcade-screen" width="320" height="180"
-                    tabindex="0"
-                    aria-label="Arcade de tres minijuegos. Flechas para elegir, espacio para jugar."></canvas>
-            <div class="crt-overlay" aria-hidden="true"></div>
-            <div class="crt-glare" aria-hidden="true"></div>
+          <!-- Televisor de tubo. El mueble es CSS; adentro va el mismo canvas
+               2D de siempre. La curvatura del vidrio se simula con esquinas
+               muy redondeadas y una viñeta: una distorsión de barril de verdad
+               necesitaría un shader y no paga el costo para un adorno. -->
+          <div class="tv">
+            <div class="tv-shell">
+              <div class="crt-bezel">
+                <canvas id="arcade-screen" class="arcade-screen" width="320" height="180"
+                        tabindex="0"
+                        aria-label="Arcade de tres minijuegos. Flechas para elegir, espacio para jugar."></canvas>
+                <div class="crt-curve" aria-hidden="true"></div>
+                <div class="crt-overlay" aria-hidden="true"></div>
+                <div class="crt-glare" aria-hidden="true"></div>
+              </div>
+
+              <div class="tv-plate">
+                <span class="tv-mark">RESET · CRT 14&quot;</span>
+                <span class="tv-knobs" aria-hidden="true"><i></i><i></i></span>
+                <span class="crt-led" aria-hidden="true"></span>
+              </div>
+            </div>
+            <div class="tv-feet" aria-hidden="true"></div>
           </div>
+
+          <!-- La consola va ABAJO del televisor, como estaba en la vida real.
+               La vitrina se muda sola a este hueco al entrar la sección. -->
+          <div class="vitrine-slot tv-deck" id="vitrine-arcade"></div>
 
           <!-- Selector directo: no obliga a descubrir que las flechas mueven -->
           <div class="game-chips" id="game-chips" role="group" aria-label="Elegir juego"></div>

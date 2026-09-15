@@ -729,32 +729,58 @@ body.booted .line > span {
 
 /* ------------------------------------------------------------- arcade */
 
+/* Una sola columna centrada: el televisor con la consola abajo es el centro
+   de la seccion, no una de dos cosas compitiendo a los costados. Las marcas y
+   las fichas pasan debajo. */
 .arcade-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  gap: 2.5rem;
-  align-items: start;
+  justify-items: center;
+  gap: 3.2rem;
 }
-@media (max-width: 1040px) { .arcade-layout { grid-template-columns: 1fr; } }
+.arcade-machine { width: min(100%, 680px); }
+.arcade-layout > aside { width: min(100%, 980px); }
 
+/* --- televisor de tubo --- */
+
+/* El mueble es todo CSS. La idea no es dibujar un televisor "realista" sino
+   los cuatro rasgos que lo hacen leer como de tubo: carcasa gruesa, pantalla
+   hundida con esquinas MUY redondeadas, vidrio con viñeta, y patas. */
+
+.tv { position: relative; }
+
+.tv-shell {
+  position: relative;
+  padding: 20px 20px 0;
+  border-radius: 20px 20px 10px 10px;
+  /* Plastico gris de equipo de los noventa: el brillo va arriba, la sombra
+     abajo, como un molde inyectado iluminado desde el frente. */
+  background: linear-gradient(168deg, #34343A 0%, #23232A 38%, #141418 100%);
+  border: 1px solid #3A3A42;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -14px 26px rgba(0, 0, 0, 0.55),
+    0 26px 54px rgba(0, 0, 0, 0.75);
+}
+
+/* La pantalla va HUNDIDA en la carcasa: ese escalon es lo que separa un
+   televisor de tubo de un monitor plano. */
 .crt-bezel {
   position: relative;
-  padding: 15px 15px 22px;
-  border-radius: 12px 12px 6px 6px;
-  background: linear-gradient(170deg, #2A2A2E 0%, #191919 55%, #0E0E0E 100%);
-  border: 1px solid var(--line-2);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 48px rgba(0,0,0,0.7);
-}
-
-.crt-bezel::after {
-  content: 'RESET · CARTUCHO DE PRUEBA';
-  position: absolute;
-  left: 50%; bottom: 5px;
-  transform: translateX(-50%);
-  font-family: var(--font-mono);
-  font-size: 0.45rem;
-  letter-spacing: 0.2em;
-  color: var(--grey-3);
+  padding: 14px;
+  border-radius: 26px;
+  background: #07070A;
+  /* El vidrio es 4:3, como todo tubo. El juego es 16:9 (el canvas tiene
+     320x180 internos), asi que se centra y quedan bandas negras arriba y
+     abajo: exactamente lo que hace un televisor de tubo con material
+     panoramico. Estirarlo a 4:3 deformaria el pixel art, que es justo lo que
+     'image-rendering: pixelated' esta tratando de preservar. */
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .arcade-screen {
@@ -764,39 +790,73 @@ body.booted .line > span {
   /* El canvas tiene 320x180 px internos; 'pixelated' evita que el navegador
      interpole al escalarlo y borronee el pixel art. */
   image-rendering: pixelated;
-  border-radius: 3px;
+  /* Esquinas bien redondeadas: es el rasgo mas reconocible de un tubo. */
+  border-radius: 18px;
   background: #000;
-  box-shadow: inset 0 0 60px rgba(0,0,0,0.95);
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.95);
   touch-action: none;
   cursor: crosshair;
   outline: none;
 }
 
-/* Dos capas: el barrido horizontal y la trama RGB del fósforo. */
-.crt-overlay {
+/* Capas del vidrio. Las tres comparten caja con la pantalla. */
+.crt-curve,
+.crt-overlay,
+.crt-glare {
   position: absolute;
-  inset: 15px 15px 22px;
-  border-radius: 3px;
+  inset: 14px;
+  border-radius: 18px;
   pointer-events: none;
+}
+
+/* Viñeta: el tubo pierde luz hacia los bordes y se oscurece en las esquinas.
+   Es lo que sugiere que el vidrio es curvo sin deformar la imagen. */
+.crt-curve {
+  background: radial-gradient(118% 118% at 50% 50%,
+    transparent 52%, rgba(0, 0, 0, 0.30) 82%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+/* Barrido horizontal + trama RGB del fosforo. */
+.crt-overlay {
   background:
     repeating-linear-gradient(0deg, rgba(0,0,0,0.26) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(90deg, rgba(255,0,0,0.05) 0 1px, rgba(0,255,0,0.05) 1px 2px, rgba(0,0,255,0.05) 2px 3px);
   mix-blend-mode: multiply;
 }
+
+/* Reflejo del ambiente sobre el vidrio. */
 .crt-glare {
-  position: absolute;
-  inset: 15px 15px 22px;
-  border-radius: 3px;
-  pointer-events: none;
-  background: linear-gradient(125deg, rgba(255,255,255,0.09) 0%, transparent 48%);
+  background: linear-gradient(125deg, rgba(255,255,255,0.10) 0%, transparent 46%);
 }
 
-/* LED de encendido del televisor. Detalle chico, pero es lo que hace que el
-   mueble se lea como un aparato prendido y no como un dibujo. */
+/* Frente inferior: marca, perillas y LED. */
+.tv-plate {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.2rem 0.9rem;
+}
+
+.tv-mark {
+  font-family: var(--font-mono);
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+  color: var(--grey-3);
+}
+
+.tv-knobs { display: flex; gap: 7px; margin-left: auto; margin-right: 1.3rem; }
+.tv-knobs i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #3E3E46, #1A1A1E);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 1px 2px rgba(0,0,0,0.6);
+}
+
+/* LED de encendido. Detalle chico, pero es lo que hace que el mueble se lea
+   como un aparato prendido y no como un dibujo. */
 .crt-led {
-  position: absolute;
-  right: 22px;
-  bottom: 7px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
@@ -806,60 +866,158 @@ body.booted .line > span {
 }
 @keyframes led-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
-/* Resplandor del tubo sobre la sección: la pantalla ilumina lo que la rodea. */
+/* Patas: apenas dos bloques oscuros, pero apoyan el mueble en algo y evitan
+   que parezca que flota. */
+.tv-feet {
+  height: 12px;
+  margin: 0 12%;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(180deg, #17171B, #0B0B0D);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.6);
+}
+
+/* --- la consola, abajo del televisor --- */
+
+/* Caja ancha y baja: la consola es chata, y en una caja cuadrada quedaria
+   nadando en aire. El renderer sigue el alto del contenedor, asi que una caja
+   baja la muestra del tamano justo, centrada, como apoyada en un mueble. */
+.tv-deck {
+  /* Margen negativo a proposito. El canvas deja aire arriba y abajo del objeto
+     —la camara encuadra con holgura— asi que un margen positivo suma ese aire
+     al que ya hay y la consola queda flotando lejos del televisor en vez de
+     leerse apoyada abajo. */
+  margin-top: -1.6rem;
+}
+
+/* Caja ancha y baja: la consola es chata y en una caja cuadrada quedaria
+   nadando en aire. El renderer sigue el ALTO del contenedor, asi que la caja
+   define de que tamano se ve. */
+#vitrine-arcade .vitrine { aspect-ratio: 16 / 6.5; }
+
+/* Aca la etiqueta sobra: la invitacion a arrastrar ya se dio en el hero, y
+   suelta abajo del televisor se lee como un texto perdido. */
+#vitrine-arcade .vitrine-label { display: none; }
+
+/* Resplandor del tubo sobre la seccion: la pantalla ilumina lo que la rodea. */
 .arcade-machine { position: relative; }
 .arcade-machine::before {
   content: '';
   position: absolute;
-  inset: -12% -8% 30%;
+  inset: -10% -8% 40%;
   z-index: -1;
-  background: radial-gradient(60% 55% at 50% 40%, rgba(63, 224, 107, 0.13) 0%, transparent 70%);
+  background: radial-gradient(60% 55% at 50% 34%, rgba(63, 224, 107, 0.13) 0%, transparent 70%);
   filter: blur(22px);
   pointer-events: none;
 }
 
 /* --- selector directo de juego --- */
 
+/* --- los juegos, como discos --- */
+
 .game-chips {
   display: flex;
-  gap: 1px;
-  margin-top: 1rem;
-  background: var(--line);
-  border: 1px solid var(--line);
+  justify-content: center;
+  gap: clamp(1rem, 4vw, 2.6rem);
+  margin-top: 2rem;
+  flex-wrap: wrap;
 }
 
-.game-chip {
-  flex: 1;
+.cd {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  align-items: flex-start;
-  padding: 0.75rem 0.9rem;
-  background: var(--black);
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem;
+  background: none;
   border: 0;
   cursor: pointer;
-  text-align: left;
-  transition: background-color var(--t-fast) var(--ease);
+  color: inherit;
+  text-align: center;
 }
-.game-chip:hover { background: var(--surface); }
 
-.game-chip[aria-current='true'] { background: var(--surface); box-shadow: inset 2px 0 0 var(--accent); }
-
-.game-chip b {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 0.78rem;
-  color: var(--white);
-  letter-spacing: 0.01em;
+/* El disco. El brillo iridiscente es un conic-gradient rotado por disco, que
+   es lo que hace que se lea como un CD y no como un circulo de color. */
+.cd-disc {
+  position: relative;
+  width: clamp(76px, 15vw, 108px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    conic-gradient(from calc(var(--cd) * 120deg),
+      #6AD8FF, #B48CFF, #FF9AD5, #FFD27A, #8AFFC1, #6AD8FF);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(255,255,255,0.2);
+  transition: transform var(--t) var(--ease), filter var(--t) var(--ease);
+  /* En reposo van apagados: el color entra cuando el disco se levanta. */
+  filter: saturate(0.5) brightness(0.72);
 }
-.game-chip span {
+
+/* Anillo interior y agujero, como cualquier CD. */
+.cd-disc::before {
+  content: '';
+  position: absolute;
+  inset: 31%;
+  border-radius: 50%;
+  background: rgba(10, 10, 12, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+}
+.cd-hole {
+  position: absolute;
+  inset: 43%;
+  border-radius: 50%;
+  background: var(--black);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
+}
+
+/* Reflejo: una banda clara cruzada que gira con el hover. */
+.cd-disc::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,0.4) 50%, transparent 62%);
+  transition: transform var(--t-slow) var(--ease);
+}
+
+.cd:hover .cd-disc,
+.cd:focus-visible .cd-disc {
+  transform: translateY(-6px) scale(1.05);
+  filter: saturate(1.15) brightness(1);
+}
+.cd:hover .cd-disc::after { transform: rotate(38deg); }
+
+/* El elegido queda encendido y marcado: es el que esta adentro de la consola. */
+.cd[aria-current="true"] .cd-disc {
+  filter: saturate(1.2) brightness(1.04);
+  box-shadow: 0 0 0 2px var(--accent), 0 12px 26px rgba(0,0,0,0.7);
+}
+
+.cd-name {
+  font-family: var(--font-mono);
   font-size: 0.56rem;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--grey-2);
+}
+.cd[aria-current="true"] .cd-name { color: var(--accent); }
+
+.cd-ctrl {
+  font-family: var(--font-mono);
+  font-size: 0.44rem;
+  letter-spacing: 0.12em;
   color: var(--grey-3);
 }
 
-@media (max-width: 560px) { .game-chips { flex-direction: column; } }
+.cd:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
+
+
+/* En telefono los tres discos entran igual en una fila: apilarlos estira la
+   seccion tres pantallas y se pierde la idea de "elegi uno de estos tres".
+   Lo que se saca son los controles de teclado, que en tactil no aplican. */
+@media (max-width: 560px) {
+  .game-chips { gap: 0.7rem; }
+  .cd { flex: 1 1 0; min-width: 0; padding: 0.2rem; }
+  .cd-name { font-size: 0.46rem; letter-spacing: 0.06em; }
+  .cd-ctrl { display: none; }
+}
 
 /* --- marcador resumen --- */
 

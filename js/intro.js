@@ -32,11 +32,30 @@ const T = {
   end:    3.85,   // fin: el control vuelve al scroll
 };
 
-/* Encuadres. El final replica lo que calcula scroll.js en el tope de la
-   página (ver ORBIT_DEG / HEIGHT_MIN / RADIUS allá) para que el traspaso de
-   control sea invisible. */
+/* Encuadres, en orden de aparición.
+
+   NEAR es un primer plano bajo y cerrado: sirve para la tapa abriéndose,
+   porque el gesto llena la pantalla. Pero para VER ENTRAR EL DISCO no sirve —
+   tan cerca y tan de costado, el disco baja fuera de cuadro.
+
+   Por eso DISC: la cámara se retira y se pone de frente mientras la tapa se
+   abre, y se queda quieta durante toda la bajada del disco. El movimiento
+   acompaña un momento y se detiene en el otro; una cámara que sigue viajando
+   mientras pasa lo importante le roba atención a lo importante.
+
+   FAR replica lo que calcula scroll.js en el tope de la página (ver ORBIT_DEG
+   / HEIGHT_MIN / RADIUS allá) para que el traspaso de control sea invisible. */
 const NEAR = { radius: 0.27, height: 0.085, angle: Math.PI / 4 - 0.30 };
+const DISC = { radius: 0.44, height: 0.225, angle: Math.PI / 4 + 0.26 };
 const FAR  = { radius: 0.56, height: 0.260, angle: Math.PI / 4 };
+
+/** Interpola un encuadre y lo escribe en la cámara. */
+function frame(camera, a, b, k) {
+  const radius = a.radius + (b.radius - a.radius) * k;
+  const height = a.height + (b.height - a.height) * k;
+  const angle  = a.angle  + (b.angle  - a.angle)  * k;
+  camera.position.set(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+}
 
 const state = {
   active: false,
@@ -54,6 +73,60 @@ const clamp01 = (k) => Math.max(0, Math.min(1, k));
 const span = (t, a, b) => clamp01((t - a) / (b - a));
 
 export const introActive = () => state.active;
+
+/* ---------------------------------------------------------------- cambio de CD
+
+   Elegir un juego es cambiar el disco: la tapa se abre, el que estaba sale, baja
+   el nuevo y la tapa se cierra. Es la misma maquinaria que la cinemática de
+   carga —mismo clip, mismo disco— pero SIN tocar la cámara: acá el usuario está
+   mirando el televisor, y moverle el encuadre mientras elige sería arrebatarle
+   el control de una interacción que empezó él. */
+
+const INS = { open: 0.60, out: 0.95, drop: 1.45, close: 2.10 };
+
+const insert = { active: false, t0: 0, onIn: null, done: false };
+
+export const insertActive = () => insert.active;
+
+/**
+ * Arranca el cambio de disco. `onIn` se llama cuando el disco toca la bandeja,
+ * que es el momento en que corresponde que el juego empiece.
+ * Devuelve false si no se puede (sin modelo, o con la intro corriendo).
+ */
+export function startInsert(onIn) {
+  if (!state.ready || state.active) return false;
+  insert.active = true;
+  insert.done = false;
+  insert.t0 = performance.now();
+  insert.onIn = onIn ?? null;
+  setScrubMode(true);
+  return true;
+}
+
+function updateInsert() {
+  const t = (performance.now() - insert.t0) / 1000;
+
+  // Tapa: abre, espera el cambio, cierra.
+  if (t < INS.drop) setLidProgress(ease(span(t, 0, INS.open)));
+  else setLidProgress(1 - ease(span(t, INS.drop, INS.close)));
+
+  // Disco: sale y vuelve a entrar.
+  if (t < INS.out) setDropProgress(1 - ease(span(t, INS.open, INS.out)));
+  else setDropProgress(ease(span(t, INS.out, INS.drop)));
+
+  if (!insert.done && t >= INS.drop) {
+    insert.done = true;
+    const cb = insert.onIn;
+    insert.onIn = null;
+    cb?.();
+  }
+
+  if (t >= INS.close) {
+    insert.active = false;
+    setScrubMode(false);
+    syncLidFromClip();
+  }
+}
 
 /** Crea el disco. Se llama una vez, apenas el modelo está disponible. */
 export function initIntro(sceneState) {
@@ -118,6 +191,11 @@ function finish() {
  */
 export function updateIntro(camera, controls, dt) {
   updateDisc(dt);
+
+  /* El cambio de disco devuelve false: no toma la cámara, así que el orbitado
+     ligado al scroll sigue mandando mientras el disco entra. */
+  if (insert.active) { updateInsert(); return false; }
+
   if (!state.active) return false;
 
   const t = (performance.now() - state.t0) / 1000;
@@ -137,18 +215,14 @@ export function updateIntro(camera, controls, dt) {
   // --- LED ---
   if (t >= T.power) setLed(2.8);
 
-  // --- cámara: primer plano que se aleja hasta el encuadre del hero ---
-  const k = ease(span(t, T.close, T.end));
-  const radius = NEAR.radius + (FAR.radius - NEAR.radius) * k;
-  const height = NEAR.height + (FAR.height - NEAR.height) * k;
-  const angle  = NEAR.angle  + (FAR.angle  - NEAR.angle)  * k;
-
+  /* --- cámara: NEAR mientras abre la tapa, quieta en DISC mientras entra el
+         disco, y de ahí al encuadre del hero. --- */
   if (camera) {
-    camera.position.set(
-      Math.cos(angle) * radius,
-      height,
-      Math.sin(angle) * radius
-    );
+    if (t < T.close) {
+      frame(camera, NEAR, DISC, ease(span(t, T.hold, T.open)));
+    } else {
+      frame(camera, DISC, FAR, ease(span(t, T.close, T.end)));
+    }
   }
   if (controls) controls.target.set(0, 0.055, 0);
 

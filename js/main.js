@@ -19,7 +19,7 @@ import { initInteraction, updateInteractions, interactState } from './interact.j
 import { initScrollSync, updateScrollCamera, setScrollContainer, bindControls } from './scroll.js';
 import { initScrolly, updateScrolly, initReadingProgress, initCounters } from './scrolly.js';
 import { initBoot, setBootProgress, finishBoot, armBootFailsafe, clearBoot, BOOT_DRAW_MS } from './boot.js';
-import { initIntro, startIntro, updateIntro, skipIntro, introActive } from './intro.js';
+import { initIntro, startIntro, updateIntro, skipIntro, introActive, startInsert } from './intro.js';
 import { discState, setSpinTarget } from './disc.js';
 import {
   initArcade, playById, toggleArcadeSound, focusArcade,
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initReadingProgress();
   initCounters();
   initScrolly(document.getElementById('restauracion'));
-  watchProcessSection();
+  watchVitrineSections();
   wireIntroSkip();
   if (location.search.includes('debug')) exposeDiagnostics();
 });
@@ -224,8 +224,17 @@ function watchVisibility(container) {
 
   // Mientras el modal tapa la vitrina, toda la GPU es para el arcade.
   window.addEventListener('reset:crt', (e) => {
-    pause.modalOpen = !!e.detail?.open;
+    const abierto = !!e.detail?.open;
+    pause.modalOpen = abierto;
     syncPause();
+
+    /* La cabina del arcade se muda ENTERA al modal (ver mountInto en
+       arcade.js), y el hueco de la vitrina vive adentro de ella. Sin esto el
+       canvas WebGL viajaría al modal de arranque y aparecería flotando abajo
+       del juego. Se lo saca antes de que se mude, y al cerrar vuelve a donde
+       corresponda. */
+    if (abierto) placeVitrine('vitrine-home');
+    else reubicarVitrina();
   });
 }
 
@@ -323,38 +332,60 @@ function moveVitrine(targetId) {
 }
 
 /**
- * Mudanza automatica entre el hero y la narrativa de restauracion.
+ * Mudanza automatica de la vitrina a la seccion que se esta mirando.
  *
- * Hay un solo canvas WebGL en todo el documento —tener dos contextos vivos
- * por una transicion visual es caro y ademas el segundo se pierde apenas el
- * navegador decide reclamar memoria— asi que la vitrina viaja al slot de la
- * seccion que esta en pantalla.
+ * Hay un solo canvas WebGL en todo el documento —tener dos contextos vivos por
+ * una transicion visual es caro, y ademas el segundo se pierde apenas el
+ * navegador decida reclamar memoria— asi que la vitrina viaja al hueco de la
+ * seccion que esta en pantalla y vuelve al hero cuando no hay ninguna.
  *
- * El disparo NO puede depender de un threshold por proporcion: la seccion
+ * El disparo NO puede depender de un threshold por proporcion: #restauracion
  * mide varias pantallas de alto, y un elemento de 2880px en un viewport de
- * 900px nunca llega a estar 35% visible —su maximo es 31%—, asi que el
- * observer no se dispararia nunca. Con rootMargin negativo el criterio pasa a
- * ser "la seccion toca la banda central del viewport", que se cumple igual sea
- * cual sea su alto y no rebota si el usuario hace scroll fino sobre el borde.
+ * 900px nunca llega a estar 35% visible —su maximo es 31%—, asi que el observer
+ * no se dispararia nunca. Con rootMargin negativo el criterio pasa a ser "la
+ * seccion toca la banda central del viewport", que se cumple igual sea cual sea
+ * su alto y no rebota si el usuario hace scroll fino sobre el borde.
  *
- * Si el usuario mando la vitrina al catalogo con "Ver en 3D", no se la
- * sacamos: esa mudanza fue explicita y manda sobre la automatica.
+ * Si el usuario mando la vitrina al catalogo con "Ver en 3D", no se la sacamos:
+ * esa mudanza fue explicita y manda sobre la automatica.
  */
-function watchProcessSection() {
-  const section = document.getElementById('restauracion');
-  const vitrine = document.getElementById('vitrine');
-  if (!section || !vitrine || !('IntersectionObserver' in window)) return;
+const DESTINOS = [
+  ['restauracion', 'vitrine-process'],
+  ['arcade', 'vitrine-arcade'],
+];
 
-  const AUTO = new Set(['vitrine-home', 'vitrine-process']);
+/* La fija watchVitrineSections. Permite volver a colocar la vitrina sin
+   esperar a que cambie la interseccion, por ejemplo al cerrar el modal. */
+let reubicarVitrina = () => {};
+
+function watchVitrineSections() {
+  const vitrine = document.getElementById('vitrine');
+  if (!vitrine || !('IntersectionObserver' in window)) return;
+
+  const AUTO = new Set(['vitrine-home', ...DESTINOS.map(([, slot]) => slot)]);
+  const visibles = new Set();
+
+  const aplicar = () => {
+    if (!AUTO.has(vitrine.parentElement?.id)) return;
+    // El primero de la lista que este a la vista gana; si no hay ninguno,
+    // la vitrina vuelve al hero.
+    const par = DESTINOS.find(([sec]) => visibles.has(sec));
+    placeVitrine(par ? par[1] : 'vitrine-home');
+  };
+  reubicarVitrina = aplicar;
 
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) {
-      if (!AUTO.has(vitrine.parentElement?.id)) return;
-      placeVitrine(e.isIntersecting ? 'vitrine-process' : 'vitrine-home');
+      if (e.isIntersecting) visibles.add(e.target.id);
+      else visibles.delete(e.target.id);
     }
+    aplicar();
   }, { threshold: 0, rootMargin: '-35% 0px -35% 0px' });
 
-  io.observe(section);
+  for (const [sec] of DESTINOS) {
+    const el = document.getElementById(sec);
+    if (el) io.observe(el);
+  }
 }
 
 // ------------------------------------------------------------ fichas 3D/2D
@@ -435,26 +466,45 @@ function buildFlipCards() {
  * Estos botones dicen qué juegos hay y arrancan el que toques, sin que nadie
  * tenga que adivinar el control.
  */
+/**
+ * Los juegos, como discos que se eligen.
+ *
+ * Elegir uno no es apretar un boton: la tapa se abre, sale el disco anterior,
+ * baja el nuevo y la tapa se cierra. El juego arranca EN EL MOMENTO en que el
+ * disco toca la bandeja, no al hacer click, porque si arranca antes la
+ * animacion se convierte en un adorno que tapa lo que ya empezo.
+ */
 function buildGameChips() {
-  const bar = document.getElementById('game-chips');
-  if (!bar) return;
+  const rack = document.getElementById('game-chips');
+  if (!rack) return;
 
-  const games = listGames();
-  bar.innerHTML = '';
+  const juegos = listGames();
+  rack.innerHTML = '';
 
-  games.forEach((g) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'game-chip';
-    chip.setAttribute('aria-current', 'false');
-    chip.innerHTML = `<b>${g.name}</b><span>${g.controls}</span>`;
-    chip.addEventListener('click', () => {
-      playById(g.id);
-      focusArcade();
-      bar.querySelectorAll('.game-chip').forEach((c) => c.setAttribute('aria-current', 'false'));
-      chip.setAttribute('aria-current', 'true');
+  juegos.forEach((g, i) => {
+    const cd = document.createElement('button');
+    cd.type = 'button';
+    cd.className = 'cd';
+    cd.style.setProperty('--cd', String(i));      // tinte distinto por disco
+    cd.setAttribute('aria-current', 'false');
+    cd.innerHTML =
+      `<span class="cd-disc" aria-hidden="true"><i class="cd-hole"></i></span>` +
+      `<span class="cd-name">${g.name}</span>` +
+      `<span class="cd-ctrl">${g.controls}</span>`;
+
+    cd.addEventListener('click', () => {
+      rack.querySelectorAll('.cd').forEach((o) => o.setAttribute('aria-current', 'false'));
+      cd.setAttribute('aria-current', 'true');
+
+      const arrancar = () => { playById(g.id); focusArcade(); };
+
+      /* Si el 3D no esta disponible —modelo caido, WebGL apagado— el juego
+         tiene que arrancar igual. La animacion es el envoltorio, no el
+         contenido. */
+      if (!startInsert(arrancar)) arrancar();
     });
-    bar.appendChild(chip);
+
+    rack.appendChild(cd);
   });
 }
 

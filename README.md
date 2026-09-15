@@ -122,6 +122,34 @@ de la web se cuenta como lo que sería cargar un juego.
 Las marcas de tiempo son las constantes `T` arriba de `js/intro.js`: editar ahí
 cambia el ritmo. La cinemática dura 3,85 s.
 
+### 4c-bis. El arcade: televisor de tubo y discos elegibles
+
+La sección del arcade es una sola columna centrada: televisor arriba, consola
+abajo, y los tres juegos como discos que se eligen.
+
+- **El mueble es todo CSS.** No se busca un televisor "realista" sino los cuatro
+  rasgos que lo hacen leer como de tubo: carcasa gruesa, pantalla hundida con
+  esquinas muy redondeadas, viñeta sobre el vidrio, y patas. Una distorsión de
+  barril de verdad necesitaría un shader y no paga el costo para un adorno.
+- **El vidrio es 4:3 y el juego 16:9**, así que se centra y quedan bandas negras
+  arriba y abajo. Es lo que hace un tubo con material panorámico; estirarlo
+  deformaría el pixel art que `image-rendering: pixelated` está preservando.
+- **Elegir un juego es cambiar el disco**: la tapa se abre, sale el que estaba,
+  baja el nuevo y la tapa se cierra, reutilizando el mismo clip y el mismo disco
+  de la cinemática de carga. El juego arranca cuando el disco **toca la
+  bandeja**, no al hacer click: si arranca antes, la animación se vuelve un
+  adorno que tapa lo que ya empezó. Si el 3D no está disponible, el juego
+  arranca igual — la animación es el envoltorio, no el contenido.
+- A diferencia de la cinemática de carga, el cambio de disco **no toca la
+  cámara**: el usuario está mirando el televisor, y moverle el encuadre mientras
+  elige sería arrebatarle el control de una interacción que empezó él.
+
+> Una trampa que hubo que atajar: `mountInto()` muda **toda** la cabina
+> (`#arcade-machine`) al modal del botón POWER, y el hueco de la vitrina 3D vive
+> adentro de ella. Sin sacarla antes, el canvas WebGL viajaba al modal y
+> aparecía flotando abajo del juego. Se la mueve al hero al abrir y se la
+> reubica al cerrar.
+
 ### 4d. Arrancar siempre desde arriba
 
 Son dos cosas distintas y hacen falta las dos: el navegador **restaura** el
