@@ -917,7 +917,7 @@ body.booted .line > span {
 .game-chips {
   display: flex;
   justify-content: center;
-  gap: clamp(1rem, 4vw, 2.6rem);
+  gap: clamp(1rem, 4.5vw, 3rem);
   margin-top: 2rem;
   flex-wrap: wrap;
 }
@@ -939,7 +939,10 @@ body.booted .line > span {
    es lo que hace que se lea como un CD y no como un circulo de color. */
 .cd-disc {
   position: relative;
-  width: clamp(76px, 15vw, 108px);
+  /* Grandes a proposito. Un CD real mide 12cm contra los 26cm de ancho de la
+     consola —casi la mitad— y con discos chicos la escena se lee mal: parecen
+     fichas al lado del aparato en vez de los discos que entran en el. */
+  width: clamp(104px, 21vw, 168px);
   aspect-ratio: 1;
   border-radius: 50%;
   background:
@@ -1015,7 +1018,7 @@ body.booted .line > span {
 @media (max-width: 560px) {
   .game-chips { gap: 0.7rem; }
   .cd { flex: 1 1 0; min-width: 0; padding: 0.2rem; }
-  .cd-name { font-size: 0.46rem; letter-spacing: 0.06em; }
+  .cd-name { font-size: 0.48rem; letter-spacing: 0.05em; }
   .cd-ctrl { display: none; }
 }
 

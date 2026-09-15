@@ -134,6 +134,15 @@ abajo, y los tres juegos como discos que se eligen.
 - **El vidrio es 4:3 y el juego 16:9**, así que se centra y quedan bandas negras
   arriba y abajo. Es lo que hace un tubo con material panorámico; estirarlo
   deformaría el pixel art que `image-rendering: pixelated` está preservando.
+- **El televisor bootea cuando alguien lo mira.** El loop del arcade arranca
+  junto con la página, así que los 3,6 segundos de octaedro girando terminaban
+  mientras el visitante todavía estaba arriba de todo: para cuando llegaba al
+  televisor ya estaba en el menú y no veía nunca el arranque. `replayBoot()` lo
+  reinicia cuando la sección entra en pantalla, y no interrumpe una partida en
+  curso.
+- **Los discos son grandes a propósito.** Un CD mide 12 cm contra los 26 cm de
+  ancho de la consola —casi la mitad—, y con discos chicos la escena se lee mal:
+  parecen fichas al lado del aparato en vez de los discos que entran en él.
 - **Elegir un juego es cambiar el disco**: la tapa se abre, sale el que estaba,
   baja el nuevo y la tapa se cierra, reutilizando el mismo clip y el mismo disco
   de la cinemática de carga. El juego arranca cuando el disco **toca la

@@ -22,7 +22,7 @@ import { initBoot, setBootProgress, finishBoot, armBootFailsafe, clearBoot, BOOT
 import { initIntro, startIntro, updateIntro, skipIntro, introActive, startInsert } from './intro.js';
 import { discState, setSpinTarget } from './disc.js';
 import {
-  initArcade, playById, toggleArcadeSound, focusArcade,
+  initArcade, playById, toggleArcadeSound, focusArcade, replayBoot,
   getStats, coverDataURL, listGames,
 } from './arcade.js';
 
@@ -374,10 +374,19 @@ function watchVitrineSections() {
   };
   reubicarVitrina = aplicar;
 
+  let arcadeVista = false;
+
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (e.isIntersecting) visibles.add(e.target.id);
       else visibles.delete(e.target.id);
+
+      /* El televisor arranca su secuencia de booteo la primera vez que alguien
+         lo mira, no al cargar la pagina. Ver replayBoot en arcade.js. */
+      if (e.target.id === 'arcade' && e.isIntersecting && !arcadeVista) {
+        arcadeVista = true;
+        replayBoot();
+      }
     }
     aplicar();
   }, { threshold: 0, rootMargin: '-35% 0px -35% 0px' });

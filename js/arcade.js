@@ -157,8 +157,11 @@ function drawBoot() {
   if (t > 0.35) {
     const appear = clamp((t - 0.35) / 0.9, 0, 1);
     const spin = t * 1.6;
-    const scale = 26 * appear;
-    const cx = W / 2, cy = 74;
+    /* Grande a proposito: en una pantalla de 320x180 un logo de 52px se pierde.
+       Este ocupa cerca de la mitad del ancho, que es la presencia que tiene un
+       arranque de consola en un televisor de verdad. */
+    const scale = 38 * appear;
+    const cx = W / 2, cy = 62;
 
     // Octaedro: 6 vértices. Proyección ortográfica simple.
     const verts = [
@@ -176,7 +179,7 @@ function drawBoot() {
     gfx.ctx.lineWidth = 1;
     for (const [a, b] of edges) {
       const depth = (verts[a][2] + verts[b][2]) / 2;
-      gfx.ctx.strokeStyle = depth > 0 ? '#E8E4D8' : '#6A6A78';
+      gfx.ctx.strokeStyle = depth > 0 ? '#FFFDF4' : '#7C7C8C';
       gfx.ctx.beginPath();
       gfx.ctx.moveTo(verts[a][0] + 0.5, verts[a][1] + 0.5);
       gfx.ctx.lineTo(verts[b][0] + 0.5, verts[b][1] + 0.5);
@@ -189,7 +192,7 @@ function drawBoot() {
     const a = clamp((t - 1.7) / 0.7, 0, 1);
     gfx.alpha(a, () => {
       const word = 'RESET';
-      const size = 22;
+      const size = 28;
       gfx.ctx.font = `${size}px "Silkscreen", monospace`;
       const total = gfx.ctx.measureText(word).width;
       let x = (W - total) / 2;
@@ -197,7 +200,7 @@ function drawBoot() {
         // ±1px de jitter por letra: el temblor de vértices.
         const jx = Math.round((Math.random() - 0.5) * 1.8);
         const jy = Math.round((Math.random() - 0.5) * 1.8);
-        gfx.text(ch, x + jx, 112 + jy, { size, color: '#E8E4D8' });
+        gfx.text(ch, x + jx, 120 + jy, { size, color: '#FFFDF4' });
         x += gfx.ctx.measureText(ch).width;
       }
     });
@@ -205,12 +208,12 @@ function drawBoot() {
 
   if (t > 2.5) {
     gfx.alpha(clamp((t - 2.5) / 0.6, 0, 1), () => {
-      gfx.text('RESET COMPUTER ENTERTAINMENT', W / 2, 142, { size: 8, align: 'center', color: '#8A8A98' });
+      gfx.text('RESET COMPUTER ENTERTAINMENT', W / 2, 146, { size: 8, align: 'center', color: '#9A9AA8' });
     });
   }
 
   if (t > 3.0 && gfx.blink(app.t, 2)) {
-    gfx.text('PULSÁ ESPACIO', W / 2, 160, { size: 8, align: 'center', color: '#4A4A58' });
+    gfx.text('PULSÁ ESPACIO', W / 2, 168, { size: 8, align: 'center', color: '#5A5A68' });
   }
 }
 
@@ -377,6 +380,25 @@ export function initArcade(canvasEl, rootEl) {
   app.best = loadBest(GAMES[0].id);
   loop = createLoop(step, draw);
   loop.start();
+}
+
+/**
+ * Vuelve a la pantalla de arranque.
+ *
+ * El loop arranca junto con la página, así que el booteo —3,6 segundos de
+ * octaedro girando y la marca temblando— termina mientras el visitante todavía
+ * está arriba de todo mirando el hero. Para cuando llega al televisor ya está
+ * en el menú y no vio nunca la parte que da el golpe. Esto lo reinicia cuando
+ * la sección aparece en pantalla, que es cuando hay alguien mirando.
+ *
+ * No interrumpe una partida en curso: reiniciar el televisor porque alguien
+ * hizo scroll sería quitarle al jugador algo que estaba haciendo él.
+ */
+export function replayBoot() {
+  if (app.phase === 'playing' || app.phase === 'gameover') return;
+  app.phase = 'boot';
+  app.t = 0;
+  app.transition = 1;
 }
 
 /** Mueve la cabina dentro de otro contenedor (el modal del botón POWER). */
